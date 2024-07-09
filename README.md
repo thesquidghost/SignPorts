@@ -2,6 +2,12 @@
 
 SignPorts is a Bukkit/Spigot plugin that allows players to create and use sign-based teleportation ports within their claims. This plugin integrates with GriefDefender for claim management and PlaceholderAPI for enhanced customization.
 
+## Currently Known Issues and Projects:
+
+- Editing already existing SignPorts does not work, and commands return unknown subcommand error.
+  - The plan is to have it so that the edit claim selection in the gui will delete the SignPort listing and start the creation event over again.
+- The formatting / lore of the SignPorts in the gui is kind of ugly and that purple color is... uh... ouch, on the eyes. Will change to make it nicer to read. Perhaps italicize owner's name and make the lore / description font smaller. 
+
 ## Features
 
 - Create teleportation points using signs within player-owned claims
