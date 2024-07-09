@@ -9,6 +9,7 @@ import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Map;
+import java.util.Arrays;
 
 public class SignPortCommand implements CommandExecutor {
     private final SignPorts plugin;
@@ -114,15 +115,21 @@ public class SignPortCommand implements CommandExecutor {
             return false;
         }
 
-        String name = args[1];
+        String name = String.join(" ", Arrays.copyOfRange(args, 1, args.length));
+        plugin.getLogger().info("Attempting to teleport to: '" + name + "'");
+
         SignPortSetup setup = plugin.getSignPortMenu().getSignPortByName(name);
         if (setup == null) {
+            plugin.getLogger().info("SignPort not found: '" + name + "'");
             player.sendMessage(ChatColor.RED + "No SignPort found with that name.");
             return false;
         }
 
         Location destination = setup.getSignLocation();
+        plugin.getLogger().info("Destination location: " + destination);
+
         if (!plugin.isSafeLocation(destination)) {
+            plugin.getLogger().info("Destination is not safe: " + destination);
             player.sendMessage(ChatColor.RED + "The destination is not safe. Teleportation cancelled.");
             return false;
         }

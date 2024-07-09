@@ -104,43 +104,57 @@ public class SignPortGUI implements Listener {
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
-        if (!event.getView().getTitle().equals(plugin.getConfig().getString("menu-name", "SignPorts Menu"))) return;
+        plugin.getLogger().info("Inventory click event triggered");
+        if (!event.getView().getTitle().equals(plugin.getConfig().getString("menu-name", "SignPorts Menu"))) {
+            plugin.getLogger().info("Not a SignPorts menu");
+            return;
+        }
         event.setCancelled(true);
+        plugin.getLogger().info("SignPorts menu click detected");
         Player player = (Player) event.getWhoClicked();
         ItemStack clickedItem = event.getCurrentItem();
 
-        if (clickedItem == null || clickedItem.getType() == Material.AIR) return;
+        if (clickedItem == null || clickedItem.getType() == Material.AIR) {
+            plugin.getLogger().info("Clicked on empty slot");
+            return;
+        }
 
-        switch (event.getRawSlot()) {
-            case 0: // Close menu
-                player.closeInventory();
-                break;
-            case 8: // Edit SignPort
-                handleEditSignPort(player);
-                break;
-            case 45: // Previous page
-            case 53: // Next page
-                ItemMeta meta = clickedItem.getItemMeta();
-                if (meta != null && meta.hasLore()) {
-                    List<String> lore = meta.getLore();
-                    if (lore != null && !lore.isEmpty()) {
-                        String firstLore = lore.getFirst();
-                        if (firstLore.contains("Click to go to page")) {
-                            int currentPage = Integer.parseInt(firstLore.split(" ")[5]);
-                            openSignPortMenu(player, currentPage);
-                        }
-                    }
+        int slot = event.getRawSlot();
+        plugin.getLogger().info("Clicked on slot: " + slot);
+
+        if (slot == 0) { // Close menu
+            plugin.getLogger().info("Closing menu");
+            player.closeInventory();
+        } else if (slot == 8) { // Edit SignPort
+            plugin.getLogger().info("Edit SignPort clicked");
+            handleEditSignPort(player);
+        } else if (slot == 45 || slot == 53) { // Previous or Next page
+            plugin.getLogger().info("Page navigation clicked");
+            handlePageNavigation(player, clickedItem);
+        } else if (slot >= 18 && slot <= 44) {
+            plugin.getLogger().info("SignPort item clicked");
+            handleSignPortClick(player, clickedItem);
+        } else {
+            plugin.getLogger().info("Clicked on non-functional slot: " + slot);
+        }
+    }
+
+    private void handlePageNavigation(Player player, ItemStack clickedItem) {
+        ItemMeta meta = clickedItem.getItemMeta();
+        if (meta != null && meta.hasLore()) {
+            List<String> lore = meta.getLore();
+            if (lore != null && !lore.isEmpty()) {
+                String firstLore = lore.getFirst();
+                if (firstLore.contains("Click to go to page")) {
+                    int currentPage = Integer.parseInt(firstLore.split(" ")[5]);
+                    openSignPortMenu(player, currentPage);
                 }
-                break;
-            default:
-                if (event.getRawSlot() >= 18 && event.getRawSlot() <= 44 && event.getRawSlot() % 9 != 0 && event.getRawSlot() % 9 != 8) {
-                    handleSignPortClick(player, clickedItem);
-                }
-                break;
+            }
         }
     }
 
     private void handleEditSignPort(Player player) {
+        // Implement edit functionality
         player.closeInventory();
         player.sendMessage(ChatColor.YELLOW + "To edit a SignPort, use the following commands:");
         player.sendMessage(ChatColor.YELLOW + "/signport setname <name> - Change the name of your SignPort");
@@ -149,20 +163,44 @@ public class SignPortGUI implements Listener {
     }
 
     private void handleSignPortClick(Player player, ItemStack clickedItem) {
+        plugin.getLogger().info("Handling SignPort click for player " + player.getName());
+
+        if (clickedItem == null || clickedItem.getType() == Material.BLACK_STAINED_GLASS_PANE) {
+            plugin.getLogger().info("Clicked item is null or glass pane, ignoring");
+            return;
+        }
+
         ItemMeta meta = clickedItem.getItemMeta();
-        if (meta == null) return;
+        if (meta == null) {
+            plugin.getLogger().info("Clicked item has no metadata, ignoring");
+            return;
+        }
+
         String signPortName = ChatColor.stripColor(meta.getDisplayName());
+        plugin.getLogger().info("SignPort name from clicked item: '" + signPortName + "'");
+
+        if (signPortName.isEmpty()) {
+            plugin.getLogger().info("SignPort name is empty, ignoring");
+            return;
+        }
+
+        plugin.getLogger().info("Player " + player.getName() + " clicked on SignPort: " + signPortName);
         SignPortSetup setup = plugin.getSignPortMenu().getSignPortByName(signPortName);
         if (setup != null) {
             Location destination = setup.getSignLocation();
+            plugin.getLogger().info("Destination location: " + destination);
             if (plugin.isSafeLocation(destination)) {
+                plugin.getLogger().info("Location is safe, attempting teleport");
                 player.teleport(destination);
                 player.sendMessage(ChatColor.GREEN + "You've been teleported to " + setup.getName());
+                plugin.getLogger().info("Player " + player.getName() + " teleported to " + signPortName);
             } else {
                 player.sendMessage(ChatColor.RED + "The destination is not safe. Teleportation cancelled.");
+                plugin.getLogger().info("Teleportation cancelled for " + player.getName() + " to " + signPortName + ". Unsafe location.");
             }
         } else {
             player.sendMessage(ChatColor.RED + "That SignPort no longer exists.");
+            plugin.getLogger().info("SignPort not found: " + signPortName);
         }
     }
 

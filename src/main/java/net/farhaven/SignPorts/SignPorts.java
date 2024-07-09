@@ -53,7 +53,7 @@ public class SignPorts extends JavaPlugin {
         SignPortSetupCommands setupCommands = new SignPortSetupCommands(this);
 
         getServer().getPluginManager().registerEvents(signListener, this);
-        getServer().getPluginManager().registerEvents(signPortGUI, this);
+        getServer().getPluginManager().registerEvents(signPortGUI, this);  // Make sure this line is here
         getServer().getPluginManager().registerEvents(signPortMenu, this);
 
         registerCommand("signport", new SignPortCommand(this));
@@ -132,6 +132,7 @@ public class SignPorts extends JavaPlugin {
     public void saveSignPort(SignPortSetup setup) {
         Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
             String name = setup.getName();
+            getLogger().info("Saving SignPort: '" + name + "'");
             ConfigurationSection signportSection = getConfig().createSection("signports." + name);
             setup.saveToConfig(signportSection);
             saveConfig();
@@ -140,6 +141,7 @@ public class SignPorts extends JavaPlugin {
             Bukkit.getScheduler().runTask(this, () -> {
                 signPortMenu.addSignPort(setup);
                 setPlayerHasReachedSignPortLimit(setup.getOwnerUUID(), true);
+                getLogger().info("SignPort saved and added to menu: '" + name + "'");
             });
         });
     }
@@ -154,7 +156,10 @@ public class SignPorts extends JavaPlugin {
 
     public boolean isSafeLocation(Location location) {
         World world = location.getWorld();
-        if (world == null) return false;
+        if (world == null) {
+            getLogger().info("World is null for location: " + location);
+            return false;
+        }
 
         int x = location.getBlockX();
         int y = location.getBlockY();
@@ -164,6 +169,42 @@ public class SignPorts extends JavaPlugin {
         Block head = world.getBlockAt(x, y + 1, z);
         Block ground = world.getBlockAt(x, y - 1, z);
 
-        return !feet.getType().isSolid() && !head.getType().isSolid() && ground.getType().isSolid();
+        getLogger().info("Checking safety for location: " + location);
+        getLogger().info("Feet block: " + feet.getType());
+        getLogger().info("Head block: " + head.getType());
+        getLogger().info("Ground block: " + ground.getType());
+
+        // Check if there's space for the player (include signs as safe)
+        boolean isSafe = (feet.getType().isAir() || feet.getType().name().contains("SIGN")) && head.getType().isAir();
+        getLogger().info("Is there space for the player? " + isSafe);
+
+        // Check if there's something to stand on (be more lenient)
+        isSafe = isSafe && (ground.getType().isSolid() || ground.getType().toString().contains("SLAB")
+                || ground.getType().toString().contains("STAIRS") || ground.getType().toString().contains("CARPET")
+                || ground.getType().toString().contains("BED") || ground.getType().name().contains("LEAVES"));
+        getLogger().info("Is there something to stand on? " + isSafe);
+
+        // If it's not safe, check one block below (in case of slabs or stairs)
+        if (!isSafe) {
+            getLogger().info("Checking one block lower");
+            feet = world.getBlockAt(x, y - 1, z);
+            head = world.getBlockAt(x, y, z);
+            ground = world.getBlockAt(x, y - 2, z);
+
+            getLogger().info("Feet block (lower): " + feet.getType());
+            getLogger().info("Head block (lower): " + head.getType());
+            getLogger().info("Ground block (lower): " + ground.getType());
+
+            isSafe = (feet.getType().isAir() || feet.getType().name().contains("SIGN")) && head.getType().isAir();
+            getLogger().info("Is there space for the player (lower)? " + isSafe);
+
+            isSafe = isSafe && (ground.getType().isSolid() || ground.getType().toString().contains("SLAB")
+                    || ground.getType().toString().contains("STAIRS") || ground.getType().toString().contains("CARPET")
+                    || ground.getType().toString().contains("BED") || ground.getType().name().contains("LEAVES"));
+            getLogger().info("Is there something to stand on (lower)? " + isSafe);
+        }
+
+        getLogger().info("Final safety result: " + isSafe);
+        return isSafe;
     }
 }
