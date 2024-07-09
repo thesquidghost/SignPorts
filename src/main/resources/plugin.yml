@@ -1,5 +1,5 @@
 name: SignPorts
-version: 1.0.0
+version: 1.0.1
 main: net.farhaven.SignPorts.SignPorts
 api-version: '1.20'
 description: A plugin for creating and using sign-based teleportation ports
