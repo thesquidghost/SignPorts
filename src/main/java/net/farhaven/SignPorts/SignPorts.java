@@ -1,12 +1,14 @@
 package net.farhaven.SignPorts;
 
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.World;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.command.*;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 
@@ -18,6 +20,7 @@ public class SignPorts extends JavaPlugin {
     private SignPortMenu signPortMenu;
     private SignPortSetupManager signPortSetupManager;
     private final Map<UUID, Boolean> playerHasSignPort = new HashMap<>();
+    private final Map<UUID, Long> teleportCooldowns = new HashMap<>();
 
     @Override
     public void onEnable() {
@@ -31,6 +34,13 @@ public class SignPorts extends JavaPlugin {
         initializeManagers();
         registerEventsAndCommands();
         loadSignPorts();
+    }
+
+    public void reloadPluginConfig() {
+        reloadConfig();
+        teleportCooldowns.clear();
+        signPortMenu.reloadSignPorts();
+        getLogger().info("SignPorts configuration reloaded.");
     }
 
     private boolean checkPluginAvailability(String pluginName, String warningMessage) {
@@ -53,7 +63,7 @@ public class SignPorts extends JavaPlugin {
         SignPortSetupCommands setupCommands = new SignPortSetupCommands(this);
 
         getServer().getPluginManager().registerEvents(signListener, this);
-        getServer().getPluginManager().registerEvents(signPortGUI, this);  // Make sure this line is here
+        getServer().getPluginManager().registerEvents(signPortGUI, this);
         getServer().getPluginManager().registerEvents(signPortMenu, this);
 
         registerCommand("signport", new SignPortCommand(this));
@@ -99,12 +109,13 @@ public class SignPorts extends JavaPlugin {
                     }
                 }
             }
+            getLogger().info("SignPorts loaded successfully.");
         });
     }
 
     @Override
     public void onDisable() {
-        getLogger().info("SignPorts is hardly (not) working!");
+        getLogger().info("SignPorts is shutting down. Goodbye!");
     }
 
     @Override
@@ -174,17 +185,14 @@ public class SignPorts extends JavaPlugin {
         getLogger().info("Head block: " + head.getType());
         getLogger().info("Ground block: " + ground.getType());
 
-        // Check if there's space for the player (include signs as safe)
         boolean isSafe = (feet.getType().isAir() || feet.getType().name().contains("SIGN")) && head.getType().isAir();
         getLogger().info("Is there space for the player? " + isSafe);
 
-        // Check if there's something to stand on (be more lenient)
         isSafe = isSafe && (ground.getType().isSolid() || ground.getType().toString().contains("SLAB")
                 || ground.getType().toString().contains("STAIRS") || ground.getType().toString().contains("CARPET")
                 || ground.getType().toString().contains("BED") || ground.getType().name().contains("LEAVES"));
         getLogger().info("Is there something to stand on? " + isSafe);
 
-        // If it's not safe, check one block below (in case of slabs or stairs)
         if (!isSafe) {
             getLogger().info("Checking one block lower");
             feet = world.getBlockAt(x, y - 1, z);
@@ -206,5 +214,58 @@ public class SignPorts extends JavaPlugin {
 
         getLogger().info("Final safety result: " + isSafe);
         return isSafe;
+    }
+
+    public boolean checkCooldown(Player player) {
+        int cooldownSeconds = getConfig().getInt("teleport-cooldown", 30);
+        if (teleportCooldowns.containsKey(player.getUniqueId())) {
+            long secondsLeft = ((teleportCooldowns.get(player.getUniqueId()) / 1000) + cooldownSeconds) - (System.currentTimeMillis() / 1000);
+            if (secondsLeft > 0) {
+                player.sendMessage(ChatColor.RED + "You must wait " + secondsLeft + " seconds before teleporting again.");
+                return false;
+            }
+        }
+        teleportCooldowns.put(player.getUniqueId(), System.currentTimeMillis());
+        return true;
+    }
+
+    public void updateSignPortName(Player player, String newName) {
+        SignPortSetup setup = signPortMenu.getSignPortByOwner(player.getUniqueId());
+        if (setup != null) {
+            if (signPortMenu.getSignPortByName(newName) != null) {
+                player.sendMessage(ChatColor.RED + "A SignPort with that name already exists.");
+                return;
+            }
+            String oldName = setup.getName();
+            setup.setName(newName);
+            signPortMenu.removeSignPort(oldName);
+            signPortMenu.addSignPort(setup);
+            saveSignPort(setup);
+            player.sendMessage(ChatColor.GREEN + "SignPort name updated to: " + newName);
+        } else {
+            player.sendMessage(ChatColor.RED + "You don't have a SignPort to edit.");
+        }
+    }
+
+    public void updateSignPortDescription(Player player, String newDescription) {
+        SignPortSetup setup = signPortMenu.getSignPortByOwner(player.getUniqueId());
+        if (setup != null) {
+            setup.setDescription(newDescription);
+            saveSignPort(setup);
+            player.sendMessage(ChatColor.GREEN + "SignPort description updated.");
+        } else {
+            player.sendMessage(ChatColor.RED + "You don't have a SignPort to edit.");
+        }
+    }
+
+    public void updateSignPortItem(Player player, ItemStack newItem) {
+        SignPortSetup setup = signPortMenu.getSignPortByOwner(player.getUniqueId());
+        if (setup != null) {
+            setup.setGuiItem(newItem);
+            saveSignPort(setup);
+            player.sendMessage(ChatColor.GREEN + "SignPort item updated to: " + newItem.getType());
+        } else {
+            player.sendMessage(ChatColor.RED + "You don't have a SignPort to edit.");
+        }
     }
 }

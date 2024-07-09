@@ -2,10 +2,12 @@ package net.farhaven.SignPorts;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Map;
@@ -26,7 +28,7 @@ public class SignPortCommand implements CommandExecutor {
         }
 
         if (args.length == 0) {
-            player.sendMessage(ChatColor.RED + "Usage: /signport <create|list|remove|teleport|gui> [name]");
+            player.sendMessage(ChatColor.RED + "Usage: /signport <create|list|remove|teleport|gui|setname|setdesc|setitem|reload> [arguments]");
             return true;
         }
 
@@ -38,8 +40,12 @@ public class SignPortCommand implements CommandExecutor {
             case "remove" -> handleRemove(player, args);
             case "teleport" -> handleTeleport(player, args);
             case "gui" -> handleGUI(player);
+            case "setname" -> handleSetName(player, args);
+            case "setdesc" -> handleSetDescription(player, args);
+            case "setitem" -> handleSetItem(player);
+            case "reload" -> handleReload(player);
             default -> {
-                player.sendMessage(ChatColor.RED + "Unknown subcommand. Use create, list, remove, teleport, or gui.");
+                player.sendMessage(ChatColor.RED + "Unknown subcommand. Use create, list, remove, teleport, gui, setname, setdesc, setitem, or reload.");
                 yield true;
             }
         };
@@ -76,7 +82,7 @@ public class SignPortCommand implements CommandExecutor {
         Map<String, SignPortSetup> signPorts = plugin.getSignPortMenu().getSignPorts();
         if (signPorts.isEmpty()) {
             player.sendMessage(ChatColor.YELLOW + "There are no SignPorts available.");
-            return false;  // Return false when there are no SignPorts
+            return false;
         }
 
         player.sendMessage(ChatColor.GREEN + "Available SignPorts:");
@@ -134,8 +140,14 @@ public class SignPortCommand implements CommandExecutor {
             return false;
         }
 
+        if (!plugin.checkCooldown(player)) {
+            plugin.getLogger().info("Teleportation cancelled for " + player.getName() + " to " + name + ". Cooldown active.");
+            return false;
+        }
+
         player.teleport(destination);
         player.sendMessage(ChatColor.GREEN + "You've been teleported to " + setup.getName() + ".");
+        plugin.getLogger().info("Player " + player.getName() + " teleported to " + name);
         return true;
     }
 
@@ -145,6 +157,46 @@ public class SignPortCommand implements CommandExecutor {
             return false;
         }
         plugin.getSignPortMenu().openSignPortMenu(player);
+        return true;
+    }
+
+    private boolean handleSetName(Player player, String[] args) {
+        if (args.length < 2) {
+            player.sendMessage(ChatColor.RED + "Usage: /signport setname <new name>");
+            return false;
+        }
+        String newName = String.join(" ", Arrays.copyOfRange(args, 1, args.length));
+        plugin.updateSignPortName(player, newName);
+        return true;
+    }
+
+    private boolean handleSetDescription(Player player, String[] args) {
+        if (args.length < 2) {
+            player.sendMessage(ChatColor.RED + "Usage: /signport setdesc <new description>");
+            return false;
+        }
+        String newDesc = String.join(" ", Arrays.copyOfRange(args, 1, args.length));
+        plugin.updateSignPortDescription(player, newDesc);
+        return true;
+    }
+
+    private boolean handleSetItem(Player player) {
+        ItemStack itemInHand = player.getInventory().getItemInMainHand();
+        if (itemInHand.getType() == Material.AIR) {
+            player.sendMessage(ChatColor.RED + "You must be holding an item to set as the SignPort icon.");
+            return false;
+        }
+        plugin.updateSignPortItem(player, itemInHand);
+        return true;
+    }
+
+    private boolean handleReload(Player player) {
+        if (!player.hasPermission("signports.admin")) {
+            player.sendMessage(ChatColor.RED + "You don't have permission to use this command.");
+            return false;
+        }
+        plugin.reloadPluginConfig();
+        player.sendMessage(ChatColor.GREEN + "SignPorts config reloaded and cooldowns reset.");
         return true;
     }
 }

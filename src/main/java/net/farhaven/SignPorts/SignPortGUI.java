@@ -20,6 +20,7 @@ import com.griefdefender.lib.flowpowered.math.vector.Vector3i;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 public class SignPortGUI implements Listener {
     private final SignPorts plugin;
@@ -57,11 +58,11 @@ public class SignPortGUI implements Listener {
             item.setAmount(1); // Ensure only one item is displayed
             ItemMeta meta = item.getItemMeta();
             if (meta != null) {
-                meta.setDisplayName(ChatColor.GREEN + setup.getName());
+                meta.setDisplayName(getRandomColor() + setup.getName());
                 List<String> lore = new ArrayList<>();
-                lore.add(ChatColor.BOLD + "Owner: " + setup.getOwnerName());
-                lore.add("Claim: " + getClaimName(setup.getSignLocation()));
-                lore.add(ChatColor.ITALIC + setup.getDescription());
+                lore.add(ChatColor.ITALIC + "" + ChatColor.GOLD + "Owner: " + setup.getOwnerName());
+                lore.add(ChatColor.ITALIC + "" + ChatColor.AQUA + setup.getDescription());
+                lore.add(ChatColor.GRAY + "Claim: " + getClaimName(setup.getSignLocation()));
                 meta.setLore(lore);
                 item.setItemMeta(meta);
             }
@@ -73,6 +74,11 @@ public class SignPortGUI implements Listener {
         updateNavigationItem(menu, 53, page < totalPages, page + 1);
 
         player.openInventory(menu);
+    }
+
+    private ChatColor getRandomColor() {
+        ChatColor[] colors = {ChatColor.RED, ChatColor.GREEN, ChatColor.BLUE, ChatColor.YELLOW, ChatColor.LIGHT_PURPLE, ChatColor.AQUA};
+        return colors[new Random().nextInt(colors.length)];
     }
 
     private ItemStack createGuiItem(Material material, String name) {
@@ -189,14 +195,18 @@ public class SignPortGUI implements Listener {
         if (setup != null) {
             Location destination = setup.getSignLocation();
             plugin.getLogger().info("Destination location: " + destination);
-            if (plugin.isSafeLocation(destination)) {
-                plugin.getLogger().info("Location is safe, attempting teleport");
+            if (plugin.isSafeLocation(destination) && plugin.checkCooldown(player)) {
+                plugin.getLogger().info("Location is safe and cooldown passed, attempting teleport");
                 player.teleport(destination);
                 player.sendMessage(ChatColor.GREEN + "You've been teleported to " + setup.getName());
                 plugin.getLogger().info("Player " + player.getName() + " teleported to " + signPortName);
             } else {
-                player.sendMessage(ChatColor.RED + "The destination is not safe. Teleportation cancelled.");
-                plugin.getLogger().info("Teleportation cancelled for " + player.getName() + " to " + signPortName + ". Unsafe location.");
+                if (!plugin.isSafeLocation(destination)) {
+                    player.sendMessage(ChatColor.RED + "The destination is not safe. Teleportation cancelled.");
+                    plugin.getLogger().info("Teleportation cancelled for " + player.getName() + " to " + signPortName + ". Unsafe location.");
+                } else {
+                    plugin.getLogger().info("Teleportation cancelled for " + player.getName() + " to " + signPortName + ". Cooldown active.");
+                }
             }
         } else {
             player.sendMessage(ChatColor.RED + "That SignPort no longer exists.");
