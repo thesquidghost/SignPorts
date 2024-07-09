@@ -1,12 +1,14 @@
 package net.farhaven.SignPorts;
 
-import net.farhaven.SignPorts.SignPorts;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.jetbrains.annotations.NotNull;
+
+import java.util.Map;
 
 public class SignPortCommand implements CommandExecutor {
     private final SignPorts plugin;
@@ -16,137 +18,126 @@ public class SignPortCommand implements CommandExecutor {
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command,
-                             String label, String[] args) {
+    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, String[] args) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage(ChatColor.RED +
-                    "This command can only be used by players.");
+            sender.sendMessage(ChatColor.RED + "This command can only be used by players.");
             return true;
         }
 
         if (args.length == 0) {
-            player.sendMessage(ChatColor.RED +
-                    "Usage: /signport <create|list|remove|teleport|gui> [name]");
+            player.sendMessage(ChatColor.RED + "Usage: /signport <create|list|remove|teleport|gui> [name]");
             return true;
         }
 
         String subCommand = args[0].toLowerCase();
 
-        switch (subCommand) {
-            case "create":
-                return handleCreate(player, args);
-            case "list":
-                return handleList(player);
-            case "remove":
-                return handleRemove(player, args);
-            case "teleport":
-                return handleTeleport(player, args);
-            case "gui":
-                return handleGUI(player);
-            default:
-                player.sendMessage(ChatColor.RED +
-                        "Unknown subcommand. Use create, list, remove, teleport, or gui.");
-                return true;
-        }
+        return switch (subCommand) {
+            case "create" -> handleCreate(player, args);
+            case "list" -> handleList(player);
+            case "remove" -> handleRemove(player, args);
+            case "teleport" -> handleTeleport(player, args);
+            case "gui" -> handleGUI(player);
+            default -> {
+                player.sendMessage(ChatColor.RED + "Unknown subcommand. Use create, list, remove, teleport, or gui.");
+                yield true;
+            }
+        };
     }
 
     private boolean handleCreate(Player player, String[] args) {
-        if (!player.hasPermission("signports.create")) {
-            player.sendMessage(ChatColor.RED +
-                    "You don't have permission to create SignPorts.");
-            return true;
-        }
         if (args.length < 2) {
             player.sendMessage(ChatColor.RED + "Usage: /signport create <name>");
-            return true;
+            return false;
         }
-        String signPortName = args[1];
+
+        String name = args[1];
+        if (plugin.getSignPortMenu().getSignPortByName(name) != null) {
+            player.sendMessage(ChatColor.RED + "A SignPort with that name already exists.");
+            return false;
+        }
+
+        if (plugin.playerHasReachedSignPortLimit(player)) {
+            player.sendMessage(ChatColor.RED + "You have reached the maximum number of SignPorts you can create.");
+            return false;
+        }
+
         Location location = player.getLocation();
-        plugin.getConfig().set("signports." + signPortName, location);
-        plugin.saveConfig();
-        String message =
-                plugin.getConfig().getString("messages.creation-success",
-                        "SignPort %signport% created successfully!");
-        player.sendMessage(ChatColor.GREEN +
-                message.replace("%signport%", signPortName));
+        SignPortSetup setup = new SignPortSetup(location);
+        setup.setName(name);
+        setup.setOwnerUUID(player.getUniqueId());
+        setup.setOwnerName(player.getName());
+        plugin.getSignPortSetupManager().startSetup(player, setup);
+        player.sendMessage(ChatColor.GREEN + "SignPort creation started. Use /confirm to set the item, then /setname and /setdesc to complete the setup.");
         return true;
     }
 
     private boolean handleList(Player player) {
-        if (!player.hasPermission("signports.list")) {
-            player.sendMessage(ChatColor.RED +
-                    "You don't have permission to list SignPorts.");
-            return true;
+        Map<String, SignPortSetup> signPorts = plugin.getSignPortMenu().getSignPorts();
+        if (signPorts.isEmpty()) {
+            player.sendMessage(ChatColor.YELLOW + "There are no SignPorts available.");
+            return false;  // Return false when there are no SignPorts
         }
+
         player.sendMessage(ChatColor.GREEN + "Available SignPorts:");
-        for (String signPortName : plugin.getConfig().getConfigurationSection("signports").
-                getKeys(false)) {
-            player.sendMessage(ChatColor.YELLOW + "- " + signPortName);
+        for (SignPortSetup setup : signPorts.values()) {
+            player.sendMessage(ChatColor.YELLOW + "- " + setup.getName() + " (Owner: " + setup.getOwnerName() + ")");
         }
         return true;
     }
 
     private boolean handleRemove(Player player, String[] args) {
-        if (!player.hasPermission("signports.remove")) {
-            player.sendMessage(ChatColor.RED +
-                    "You don't have permission to remove SignPorts.");
-            return true;
-        }
         if (args.length < 2) {
             player.sendMessage(ChatColor.RED + "Usage: /signport remove <name>");
-            return true;
+            return false;
         }
-        String signPortName = args[1];
-        if (plugin.getConfig().get("signports." + signPortName) != null) {
-            plugin.getConfig().set("signports." + signPortName, null);
-            plugin.saveConfig();
-            String message =
-                    plugin.getConfig().getString("messages.removal-success",
-                            "SignPort %signport% removed successfully!");
-            player.sendMessage(ChatColor.GREEN +
-                    message.replace("%signport%", signPortName));
-        } else {
-            player.sendMessage(ChatColor.RED + "SignPort " + signPortName +
-                    " does not exist.");
+
+        String name = args[1];
+        SignPortSetup setup = plugin.getSignPortMenu().getSignPortByName(name);
+        if (setup == null) {
+            player.sendMessage(ChatColor.RED + "No SignPort found with that name.");
+            return false;
         }
+
+        if (!setup.getOwnerUUID().equals(player.getUniqueId()) && !player.hasPermission("signports.admin")) {
+            player.sendMessage(ChatColor.RED + "You don't have permission to remove this SignPort.");
+            return false;
+        }
+
+        plugin.getSignPortMenu().removeSignPort(name);
+        player.sendMessage(ChatColor.GREEN + "SignPort '" + name + "' has been removed.");
         return true;
     }
 
     private boolean handleTeleport(Player player, String[] args) {
-        if (!player.hasPermission("signports.use")) {
-            player.sendMessage(ChatColor.RED +
-                    "You don't have permission to use SignPorts.");
-            return true;
-        }
         if (args.length < 2) {
-            player.sendMessage(ChatColor.RED +
-                    "Usage: /signport teleport <name>");
-            return true;
+            player.sendMessage(ChatColor.RED + "Usage: /signport teleport <name>");
+            return false;
         }
-        String signPortName = args[1];
-        Location signPortLocation =
-                plugin.getConfig().getLocation("signports." + signPortName);
-        if (signPortLocation != null) {
-            player.teleport(signPortLocation);
-            String message =
-                    plugin.getConfig().getString("messages.teleport-success",
-                            "You've been teleported to %signport%!");
-            player.sendMessage(ChatColor.GREEN +
-                    message.replace("%signport%", signPortName));
-        } else {
-            player.sendMessage(ChatColor.RED + "SignPort " + signPortName +
-                    " does not exist.");
+
+        String name = args[1];
+        SignPortSetup setup = plugin.getSignPortMenu().getSignPortByName(name);
+        if (setup == null) {
+            player.sendMessage(ChatColor.RED + "No SignPort found with that name.");
+            return false;
         }
+
+        Location destination = setup.getSignLocation();
+        if (!plugin.isSafeLocation(destination)) {
+            player.sendMessage(ChatColor.RED + "The destination is not safe. Teleportation cancelled.");
+            return false;
+        }
+
+        player.teleport(destination);
+        player.sendMessage(ChatColor.GREEN + "You've been teleported to " + setup.getName() + ".");
         return true;
     }
 
     private boolean handleGUI(Player player) {
         if (!player.hasPermission("signports.gui")) {
-            player.sendMessage(ChatColor.RED +
-                    "You don't have permission to use the SignPort GUI.");
-            return true;
+            player.sendMessage(ChatColor.RED + "You don't have permission to use the SignPort GUI.");
+            return false;
         }
-        new net.farhaven.SignPorts.SignPortGUI(plugin).openSignPortMenu(player);
+        plugin.getSignPortMenu().openSignPortMenu(player);
         return true;
     }
 }

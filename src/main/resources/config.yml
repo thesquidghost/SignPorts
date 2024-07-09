@@ -1,13 +1,13 @@
 # SignPorts Configuration
-# This is what the player will need to write in the first line of a sign to turn it into a signport
-welcomeLine: "[Signport]"
-warps: {}
-
-# Minimum level required to use a SignPort
-signport-level-restriction: 10
 
 # The text that should be on the first line of a sign to create a SignPort
 signport-identifier: "[SignPort]"
+
+# Menu name for the SignPorts GUI
+menu-name: "SignPorts Menu"
+
+# Minimum level required to use a SignPort
+signport-level-restriction: 10
 
 # The item to represent SignPorts in GUIs or as markers (if applicable)
 signport-icon: "OAK_SIGN"
@@ -21,10 +21,12 @@ teleport-cooldown: 10
 # Whether to allow cross-world teleportation
 allow-cross-world: true
 
-menu-name: "Player Ports"
-
 # Messages
 messages:
   creation-success: "SignPort %signport% created successfully!"
   removal-success: "SignPort %signport% removed successfully!"
   teleport-success: "You've been teleported to %signport%!"
+
+# Legacy configuration (consider removing if not used)
+welcomeLine: "[Signport]"
+warps: {}

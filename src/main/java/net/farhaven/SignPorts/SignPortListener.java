@@ -6,16 +6,15 @@ import org.bukkit.block.Block;
 import org.bukkit.block.Sign;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.SignChangeEvent;
 import com.griefdefender.api.GriefDefender;
 import com.griefdefender.api.claim.Claim;
 import com.griefdefender.api.User;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
-import java.util.UUID;
 
 public class SignPortListener implements Listener {
     private final SignPorts plugin;
@@ -24,8 +23,8 @@ public class SignPortListener implements Listener {
         this.plugin = plugin;
     }
 
-    @EventHandler
-    public void onSignChange(@NotNull SignChangeEvent event) {
+    @EventHandler(priority = EventPriority.HIGH)
+    public void onSignChange(SignChangeEvent event) {
         String signportIdentifier = plugin.getConfig().getString("signport-identifier", "[SignPort]");
         String[] lines = event.getLines();
 
@@ -40,7 +39,7 @@ public class SignPortListener implements Listener {
                 return;
             }
 
-            if (plugin.hasSignPort(player)) {
+            if (plugin.playerHasReachedSignPortLimit(player)) {
                 player.sendMessage(ChatColor.RED + "You already have a SignPort. You can only have one at a time.");
                 event.setCancelled(true);
                 return;
@@ -79,7 +78,7 @@ public class SignPortListener implements Listener {
         event.setLine(3, "");
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.NORMAL)
     public void onSignBreak(BlockBreakEvent event) {
         Block block = event.getBlock();
         if (block.getState() instanceof Sign) {
@@ -90,6 +89,7 @@ public class SignPortListener implements Listener {
                 SignPortSetup setup = plugin.getSignPortMenu().getSignPortByLocation(block.getLocation());
                 if (setup != null) {
                     plugin.getSignPortMenu().removeSignPort(setup.getName());
+                    plugin.setPlayerHasReachedSignPortLimit(player.getUniqueId(), false);
                     player.sendMessage(ChatColor.RED + "Your SignPort has been destroyed.");
                     plugin.getLogger().warning("SignPort owned by " + player.getName() + " has been destroyed at " + block.getLocation());
                 }
@@ -97,7 +97,7 @@ public class SignPortListener implements Listener {
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGH)
     public void onSignEdit(SignChangeEvent event) {
         Block block = event.getBlock();
         if (block.getState() instanceof Sign) {
@@ -109,6 +109,7 @@ public class SignPortListener implements Listener {
                 SignPortSetup setup = plugin.getSignPortMenu().getSignPortByLocation(block.getLocation());
                 if (setup != null) {
                     plugin.getSignPortMenu().removeSignPort(setup.getName());
+                    plugin.setPlayerHasReachedSignPortLimit(player.getUniqueId(), false);
                     player.sendMessage(ChatColor.RED + "Your SignPort has been removed due to editing the sign.");
                     plugin.getLogger().warning("SignPort owned by " + player.getName() + " has been removed due to editing at " + block.getLocation());
                 }

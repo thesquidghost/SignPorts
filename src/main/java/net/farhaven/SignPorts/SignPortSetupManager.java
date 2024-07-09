@@ -18,29 +18,18 @@ public class SignPortSetupManager {
         pendingSetups.put(player, setup);
     }
 
-    public boolean hasPendingSetup(Player player) {
-        return pendingSetups.containsKey(player);
-    }
-
     public SignPortSetup getPendingSetup(Player player) {
         return pendingSetups.get(player);
+    }
+
+    public void updatePendingSetup(Player player, SignPortSetup updatedSetup) {
+        pendingSetups.put(player, updatedSetup);
     }
 
     public void completePendingSetup(Player player) {
         SignPortSetup setup = pendingSetups.remove(player);
         if (setup != null) {
             plugin.saveSignPort(setup);
-        }
-    }
-
-    public void cancelPendingSetup(Player player) {
-        pendingSetups.remove(player);
-    }
-
-    // New method to update the pending setup
-    public void updatePendingSetup(Player player, SignPortSetup updatedSetup) {
-        if (pendingSetups.containsKey(player)) {
-            pendingSetups.put(player, updatedSetup);
         }
     }
 }

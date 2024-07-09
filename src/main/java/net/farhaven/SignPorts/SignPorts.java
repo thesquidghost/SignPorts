@@ -1,26 +1,28 @@
 package net.farhaven.SignPorts;
 
 import org.bukkit.Bukkit;
-import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Player;
+import org.bukkit.World;
+import org.bukkit.Location;
+import org.bukkit.block.Block;
+import org.bukkit.command.*;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.entity.Player;
+import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
-import org.bukkit.command.PluginCommand;
-import org.bukkit.command.TabCompleter;
-import org.bukkit.command.CommandExecutor;
 
-import java.util.Objects;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 public class SignPorts extends JavaPlugin {
     private SignPortMenu signPortMenu;
     private SignPortSetupManager signPortSetupManager;
+    private final Map<UUID, Boolean> playerHasSignPort = new HashMap<>();
 
     @Override
     public void onEnable() {
-        if (!checkPluginAvailability("GriefDefender", "GriefDefender not found! Disabling SignPorts.")) return;
-        if (!checkPluginAvailability("PlaceholderAPI", "Could not find PlaceholderAPI! This plugin is required."))
+        if (checkPluginAvailability("GriefDefender", "GriefDefender not found! Disabling SignPorts.")) return;
+        if (checkPluginAvailability("PlaceholderAPI", "Could not find PlaceholderAPI! This plugin is required."))
             return;
 
         saveDefaultConfig();
@@ -35,9 +37,9 @@ public class SignPorts extends JavaPlugin {
         if (getServer().getPluginManager().getPlugin(pluginName) == null) {
             getLogger().severe(warningMessage);
             getServer().getPluginManager().disablePlugin(this);
-            return false;
+            return true;
         }
-        return true;
+        return false;
     }
 
     private void initializeManagers() {
@@ -55,7 +57,7 @@ public class SignPorts extends JavaPlugin {
         getServer().getPluginManager().registerEvents(signPortMenu, this);
 
         registerCommand("signport", new SignPortCommand(this));
-        registerCommandWithTabCompleter("signport", new SignPortTabCompleter(this));
+        registerCommandWithTabCompleter(new SignPortTabCompleter(this));
         registerCommand("signportmenu", this);
         registerCommand("confirm", setupCommands);
         registerCommand("setname", setupCommands);
@@ -71,28 +73,33 @@ public class SignPorts extends JavaPlugin {
         command.setExecutor(executor);
     }
 
-    private void registerCommandWithTabCompleter(String commandName, TabCompleter tabCompleter) {
-        PluginCommand command = getCommand(commandName);
+    private void registerCommandWithTabCompleter(TabCompleter tabCompleter) {
+        PluginCommand command = getCommand("signport");
         if (command == null) {
-            getLogger().warning("Failed to register tab completer for command: " + commandName + " (command not found in plugin.yml)");
+            getLogger().warning("Failed to register tab completer for command: signport (command not found in plugin.yml)");
             return;
         }
         command.setTabCompleter(tabCompleter);
     }
 
     private void loadSignPorts() {
-        ConfigurationSection signports = getConfig().getConfigurationSection("signports");
-        if (signports != null) {
-            for (String key : signports.getKeys(false)) {
-                ConfigurationSection signportSection = signports.getConfigurationSection(key);
-                if (signportSection != null) {
-                    SignPortSetup setup = SignPortSetup.fromConfig(signportSection);
-                    if (setup != null) {
-                        signPortMenu.addSignPort(setup);
+        Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
+            ConfigurationSection signports = getConfig().getConfigurationSection("signports");
+            if (signports != null) {
+                for (String key : signports.getKeys(false)) {
+                    ConfigurationSection signportSection = signports.getConfigurationSection(key);
+                    if (signportSection != null) {
+                        SignPortSetup setup = SignPortSetup.fromConfig(signportSection);
+
+                        // Run UI updates on the main thread
+                        Bukkit.getScheduler().runTask(this, () -> {
+                            signPortMenu.addSignPort(setup);
+                            setPlayerHasReachedSignPortLimit(setup.getOwnerUUID(), true);
+                        });
                     }
                 }
             }
-        }
+        });
     }
 
     @Override
@@ -123,19 +130,40 @@ public class SignPorts extends JavaPlugin {
     }
 
     public void saveSignPort(SignPortSetup setup) {
-        String name = setup.getName();
-        ConfigurationSection signportSection = getConfig().createSection("signports." + name);
-        setup.saveToConfig(signportSection);
-        saveConfig();
-        signPortMenu.addSignPort(setup);
+        Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
+            String name = setup.getName();
+            ConfigurationSection signportSection = getConfig().createSection("signports." + name);
+            setup.saveToConfig(signportSection);
+            saveConfig();
+
+            // Run any UI updates on the main thread
+            Bukkit.getScheduler().runTask(this, () -> {
+                signPortMenu.addSignPort(setup);
+                setPlayerHasReachedSignPortLimit(setup.getOwnerUUID(), true);
+            });
+        });
     }
 
-    public boolean hasSignPort(Player player) {
-        for (SignPortSetup setup : signPortMenu.getSignPorts().values()) {
-            if (setup.getOwnerUUID().equals(player.getUniqueId())) {
-                return true;
-            }
-        }
-        return false;
+    public boolean playerHasReachedSignPortLimit(Player player) {
+        return playerHasSignPort.getOrDefault(player.getUniqueId(), false);
+    }
+
+    public void setPlayerHasReachedSignPortLimit(UUID playerUUID, boolean hasReachedLimit) {
+        playerHasSignPort.put(playerUUID, hasReachedLimit);
+    }
+
+    public boolean isSafeLocation(Location location) {
+        World world = location.getWorld();
+        if (world == null) return false;
+
+        int x = location.getBlockX();
+        int y = location.getBlockY();
+        int z = location.getBlockZ();
+
+        Block feet = world.getBlockAt(x, y, z);
+        Block head = world.getBlockAt(x, y + 1, z);
+        Block ground = world.getBlockAt(x, y - 1, z);
+
+        return !feet.getType().isSolid() && !head.getType().isSolid() && ground.getType().isSolid();
     }
 }

@@ -1,10 +1,10 @@
 package net.farhaven.SignPorts;
 
-import net.farhaven.SignPorts.SignPorts;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.configuration.ConfigurationSection;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -21,8 +21,8 @@ public class SignPortTabCompleter implements TabCompleter
     }
 
     @Override
-    public List < String > onTabComplete (CommandSender sender,
-                                          Command command, String alias,
+    public List < String > onTabComplete (@NotNull CommandSender sender,
+                                          Command command, @NotNull String alias,
                                           String[]args)
     {
         if (command.getName ().equalsIgnoreCase ("signport"))

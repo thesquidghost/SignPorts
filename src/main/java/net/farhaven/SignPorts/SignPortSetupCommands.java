@@ -1,12 +1,12 @@
 package net.farhaven.SignPorts;
 
 import org.bukkit.ChatColor;
-import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.jetbrains.annotations.NotNull;
 
 public class SignPortSetupCommands implements CommandExecutor {
 
@@ -17,13 +17,12 @@ public class SignPortSetupCommands implements CommandExecutor {
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player)) {
+    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, String[] args) {
+        if (!(sender instanceof Player player)) {
             sender.sendMessage(ChatColor.RED + "Only players can use this command.");
             return true;
         }
 
-        Player player = (Player) sender;
         SignPortSetup setup = plugin.getSignPortSetupManager().getPendingSetup(player);
 
         if (setup == null) {
@@ -31,46 +30,56 @@ public class SignPortSetupCommands implements CommandExecutor {
             return true;
         }
 
-        if (label.equalsIgnoreCase("confirm")) {
-            ItemStack itemInHand = player.getInventory().getItemInMainHand();
-            if (itemInHand.getType() == Material.AIR) {
-                player.sendMessage(ChatColor.RED + "You must hold an item in your hand.");
-                return true;
-            }
+        return switch (label.toLowerCase()) {
+            case "confirm" -> handleConfirm(player);
+            case "setname" -> handleSetName(player, args);
+            case "setdesc" -> handleSetDesc(player, args);
+            default -> false;
+        };
+    }
 
-            setup.setGuiItem(itemInHand);
-            player.sendMessage(ChatColor.YELLOW + "Item set. Now type /setname <name> to set the name for the SignPort.");
-            plugin.getSignPortSetupManager().updatePendingSetup(player, setup);
-            return true;
+    private boolean handleConfirm(Player player) {
+        ItemStack itemInHand = player.getInventory().getItemInMainHand().clone();
+        if (itemInHand.getType().isAir()) {
+            player.sendMessage(ChatColor.RED + "You must hold an item in your hand.");
+            return false;
         }
 
-        if (label.equalsIgnoreCase("setname")) {
-            if (args.length == 0) {
-                player.sendMessage(ChatColor.RED + "You must provide a name.");
-                return true;
-            }
+        itemInHand.setAmount(1);
+        SignPortSetup setup = plugin.getSignPortSetupManager().getPendingSetup(player);
+        setup.setGuiItem(itemInHand);
+        player.sendMessage(ChatColor.YELLOW + "Item set. Now type /setname <name> to set the name for the SignPort.");
+        plugin.getSignPortSetupManager().updatePendingSetup(player, setup);
+        return true;
+    }
 
-            String name = String.join(" ", args);
-            setup.setName(name);
-            player.sendMessage(ChatColor.YELLOW + "Name set. Now type /setdesc <description> to set the description for the SignPort.");
-            plugin.getSignPortSetupManager().updatePendingSetup(player, setup);
-            return true;
+    private boolean handleSetName(Player player, String[] args) {
+        if (args.length == 0) {
+            player.sendMessage(ChatColor.RED + "You must provide a name.");
+            return false;
         }
 
-        if (label.equalsIgnoreCase("setdesc")) {
-            if (args.length == 0) {
-                player.sendMessage(ChatColor.RED + "You must provide a description.");
-                return true;
-            }
+        String name = String.join(" ", args);
+        SignPortSetup setup = plugin.getSignPortSetupManager().getPendingSetup(player);
+        setup.setName(name);
+        player.sendMessage(ChatColor.YELLOW + "Name set. Now type /setdesc <description> to set the description for the SignPort.");
+        plugin.getSignPortSetupManager().updatePendingSetup(player, setup);
+        return true;
+    }
 
-            String description = String.join(" ", args);
-            setup.setDescription(description);
-            player.sendMessage(ChatColor.GREEN + "SignPort setup complete.");
-            plugin.getSignPortSetupManager().completePendingSetup(player);
-
-            return true;
+    private boolean handleSetDesc(Player player, String[] args) {
+        if (args.length == 0) {
+            player.sendMessage(ChatColor.RED + "You must provide a description.");
+            return false;
         }
 
-        return false;
+        String description = String.join(" ", args);
+        SignPortSetup setup = plugin.getSignPortSetupManager().getPendingSetup(player);
+        setup.setDescription(description);
+        player.sendMessage(ChatColor.GREEN + "SignPort setup complete.");
+        plugin.getSignPortSetupManager().completePendingSetup(player);
+        plugin.setPlayerHasReachedSignPortLimit(player.getUniqueId(), true);
+
+        return true;
     }
 }
