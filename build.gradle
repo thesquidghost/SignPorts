@@ -1,4 +1,5 @@
 plugins {
+    id 'java'
     id 'groovy'
 }
 
@@ -7,12 +8,45 @@ version = '1.0-SNAPSHOT'
 
 repositories {
     mavenCentral()
+    maven {
+        url = 'https://repo.extendedclip.com/content/repositories/placeholderapi/'
+    }
+    maven {
+        url = 'https://hub.spigotmc.org/nexus/content/repositories/snapshots/'
+    }
+    maven {
+        url = uri("https://repo.glaremasters.me/repository/bungeecord/")
+    }
+    maven {
+        url = uri("https://oss.sonatype.org/content/repositories/snapshots/")
+    }
+    maven {
+        url = 'https://repo.lucko.me/'
+    }
+    // Add GriefDefender repository
+    maven {
+        url = 'https://repo.glaremasters.me/repository/bloodshot/'
+    }
 }
 
 dependencies {
     implementation 'org.apache.groovy:groovy:4.0.14'
+    implementation 'net.luckperms:api:5.4' // Use the appropriate version
+    // Update GriefDefender dependency
+    compileOnly group: 'com.griefdefender', name: 'api', version: '2.1.0-SNAPSHOT'
+    implementation 'com.griefdefender:api:2.1.0-SNAPSHOT'
+    compileOnly 'me.clip:placeholderapi:2.11.3'
+    compileOnly 'org.spigotmc:spigot-api:1.20.6-R0.1-SNAPSHOT'
     testImplementation platform('org.junit:junit-bom:5.10.0')
     testImplementation 'org.junit.jupiter:junit-jupiter'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21) // or lower
+    }
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
 }
 
 test {

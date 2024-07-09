@@ -1,0 +1,43 @@
+name: SignPorts
+version: 1.0.0
+main: net.farhaven.SignPorts.SignPorts
+api-version: '1.20'
+description: A plugin for creating and using sign-based teleportation ports
+author: SquilliamGhost
+website: https://www.farhaven.net
+
+commands:
+  signport:
+    description: Main command for SignPorts
+    usage: /signport
+  signportmenu:
+    description: Open the SignPorts menu
+    usage: /signportmenu
+  confirm:
+    description: Confirm a SignPort setup action
+    usage: /confirm
+  setname:
+    description: Set the name for a SignPort
+    usage: /setname <name>
+  setdesc:
+    description: Set the description for a SignPort
+    usage: /setdesc <description>
+
+depend: [GriefDefender, PlaceholderAPI]
+
+permissions:
+  signports.create:
+    description: Allows creation of SignPorts
+    default: op
+  signports.use:
+    description: Allows usage of SignPorts
+    default: true
+  signports.admin:
+    description: Gives access to all SignPorts commands and features
+    default: op
+    children:
+      signports.create: true
+      signports.use: true
+  signports.gui:
+    description: Allows using the SignPort GUI
+    default: true
