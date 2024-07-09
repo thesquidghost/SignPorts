@@ -1,0 +1,152 @@
+# SignPorts Plugin Wiki
+
+## Table of Contents
+1. [Introduction](#introduction)
+2. [Features](#features)
+3. [Unique Aspects](#unique-aspects)
+4. [Commands](#commands)
+5. [Permissions](#permissions)
+6. [Configuration](#configuration)
+7. [API and Hooks](#api-and-hooks)
+8. [User Manual](#user-manual)
+9. [Admin Guide](#admin-guide)
+10. [Troubleshooting](#troubleshooting)
+
+## Introduction
+
+SignPorts is a unique player warp plugin for Bukkit/Spigot servers that allows players to create and manage their own teleportation points using in-game signs. Unlike traditional warp plugins, SignPorts integrates seamlessly with the game world, providing an immersive and intuitive experience for players.
+
+## Features
+
+- Player-created teleportation points using signs
+- GUI-based menu for easy navigation and management
+- Customizable icons for each SignPort
+- Cooldown system to prevent abuse
+- Safe teleportation checks
+- Admin controls and oversight
+- Integration with GriefDefender for claim-aware functionality
+- PlaceholderAPI support for dynamic text
+
+## Unique Aspects
+
+SignPorts stands out from other player warp plugins in several ways:
+
+1. **Sign-Based System**: Instead of abstract warp points, players create physical signs in the world, adding a tangible element to teleportation.
+
+2. **GUI Integration**: The plugin provides a user-friendly GUI for managing and using SignPorts, making it accessible for all players.
+
+3. **Customization**: Players can set custom names, descriptions, and icons for their SignPorts, allowing for personalization and easy recognition.
+
+4. **Claim Awareness**: Integration with GriefDefender ensures that SignPorts respect land claims and server rules.
+
+5. **Safety Checks**: The plugin performs thorough safety checks before teleportation, preventing accidents and exploits.
+
+6. **Immersion**: By using physical signs and custom icons, SignPorts maintains the immersive feel of the Minecraft world while adding convenient teleportation.
+
+These unique aspects make SignPorts an excellent choice for servers looking to add player-controlled teleportation without breaking immersion or compromising server integrity.
+
+## Commands
+
+- `/signport create <name>` - Create a new SignPort
+- `/signport list` - List all available SignPorts
+- `/signport remove <name>` - Remove a SignPort
+- `/signport teleport <name>` - Teleport to a SignPort
+- `/signport gui` - Open the SignPorts GUI
+- `/signport setname <new name>` - Change the name of your SignPort
+- `/signport setdesc <new description>` - Change the description of your SignPort
+- `/signport setitem` - Change the icon of your SignPort (uses item in hand)
+- `/signport reload` - Reload the plugin configuration (admin only)
+- `/signportmenu` - Open the SignPorts menu
+
+## Permissions
+
+- `signports.create` - Allows creation of SignPorts
+- `signports.use` - Allows use of SignPorts
+- `signports.remove` - Allows removal of own SignPorts
+- `signports.edit` - Allows editing of own SignPorts
+- `signports.gui` - Allows access to the SignPorts GUI
+- `signports.admin` - Grants access to admin functions (remove any SignPort, reload config)
+
+## Configuration
+
+The `config.yml` file allows server owners to customize various aspects of the plugin:
+
+```yaml
+# Cooldown time in seconds for SignPort teleportation
+teleport-cooldown: 30
+
+# Maximum number of SignPorts a player can create
+max-signports-per-player: 1
+
+# Name of the SignPorts menu
+menu-name: "SignPorts Menu"
+
+# Other configuration options...
+```
+
+## API and Hooks
+
+SignPorts integrates with the following plugins:
+
+1. **GriefDefender**: Used for claim awareness and protection.
+2. **PlaceholderAPI**: Allows the use of placeholders in SignPort names and descriptions.
+
+For developers, SignPorts provides an API for interaction with other plugins:
+
+```java
+// Example API usage
+SignPorts signPortsPlugin = (SignPorts) Bukkit.getPluginManager().getPlugin("SignPorts");
+SignPortAPI api = signPortsPlugin.getAPI();
+
+// Get a SignPort
+SignPortSetup signPort = api.getSignPortByName("ExamplePort");
+
+// Teleport a player to a SignPort
+api.teleportPlayerToSignPort(player, signPort);
+```
+
+## User Manual
+
+### Creating a SignPort
+
+1. Place a sign at the desired location.
+2. Run `/signport create <name>` while looking at the sign.
+3. Follow the prompts to set the icon, name, and description.
+
+### Using the SignPorts GUI
+
+1. Run `/signport gui` or `/signportmenu` to open the menu.
+2. Click on a SignPort icon to teleport to that location.
+
+### Editing Your SignPort
+
+- To change the name: `/signport setname <new name>`
+- To change the description: `/signport setdesc <new description>`
+- To change the icon: Hold the desired item and run `/signport setitem`
+
+### Removing a SignPort
+
+Run `/signport remove <name>` to remove your SignPort.
+
+## Admin Guide
+
+### Managing SignPorts
+
+- Admins can remove any SignPort using `/signport remove <name>`
+- Use `/signport reload` to reload the plugin configuration
+
+### Configuring the Plugin
+
+1. Edit the `config.yml` file in the SignPorts plugin folder.
+2. Adjust settings such as cooldown time and maximum SignPorts per player.
+3. Save the file and run `/signport reload` in-game.
+
+## Troubleshooting
+
+- If a player can't create a SignPort, check their permissions and the `max-signports-per-player` setting.
+- For teleportation issues, ensure the destination is safe and the player's cooldown has expired.
+- If the GUI isn't working, verify that the server has a compatible version of the required dependencies.
+
+---
+
+This wiki provides a comprehensive overview of the SignPorts plugin, highlighting its unique features, functionality, and usage instructions. It should serve as an excellent resource for both users and administrators of your plugin.
