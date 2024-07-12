@@ -1,6 +1,7 @@
 package net.farhaven.SignPorts;
 
 import org.bukkit.ChatColor;
+import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -30,7 +31,7 @@ public class SignPortSetupCommands implements CommandExecutor {
             return true;
         }
 
-        return switch (label.toLowerCase()) {
+        return switch (command.getName().toLowerCase()) {
             case "confirm" -> handleConfirm(player);
             case "setname" -> handleSetName(player, args);
             case "setdesc" -> handleSetDesc(player, args);
@@ -40,7 +41,7 @@ public class SignPortSetupCommands implements CommandExecutor {
 
     private boolean handleConfirm(Player player) {
         ItemStack itemInHand = player.getInventory().getItemInMainHand().clone();
-        if (itemInHand.getType().isAir()) {
+        if (itemInHand.getType() == Material.AIR) {
             player.sendMessage(ChatColor.RED + "You must hold an item in your hand.");
             return false;
         }
@@ -55,30 +56,35 @@ public class SignPortSetupCommands implements CommandExecutor {
 
     private boolean handleSetName(Player player, String[] args) {
         if (args.length == 0) {
-            player.sendMessage(ChatColor.RED + "You must provide a name.");
+            player.sendMessage(ChatColor.RED + "Usage: /setname <name>");
             return false;
         }
 
         String name = String.join(" ", args);
+        if (plugin.getSignPortMenu().getSignPortByName(name) != null) {
+            player.sendMessage(ChatColor.RED + "A SignPort with that name already exists. Please choose a different name.");
+            return false;
+        }
+
         SignPortSetup setup = plugin.getSignPortSetupManager().getPendingSetup(player);
         setup.setName(name);
-        player.sendMessage(ChatColor.YELLOW + "Name set. Now type /setdesc <description> to set the description for the SignPort.");
+        player.sendMessage(ChatColor.YELLOW + "Name set to '" + name + "'. Now type /setdesc <description> to set the description for the SignPort.");
         plugin.getSignPortSetupManager().updatePendingSetup(player, setup);
         return true;
     }
 
     private boolean handleSetDesc(Player player, String[] args) {
         if (args.length == 0) {
-            player.sendMessage(ChatColor.RED + "You must provide a description.");
+            player.sendMessage(ChatColor.RED + "Usage: /setdesc <description>");
             return false;
         }
 
         String description = String.join(" ", args);
         SignPortSetup setup = plugin.getSignPortSetupManager().getPendingSetup(player);
         setup.setDescription(description);
-        player.sendMessage(ChatColor.GREEN + "SignPort setup complete.");
+        player.sendMessage(ChatColor.GREEN + "SignPort setup complete. Your SignPort '" + setup.getName() + "' is now active!");
         plugin.getSignPortSetupManager().completePendingSetup(player);
-        plugin.setPlayerHasReachedSignPortLimit(player.getUniqueId(), true);
+        plugin.saveSignPort(setup);
 
         return true;
     }

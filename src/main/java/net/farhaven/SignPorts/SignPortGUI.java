@@ -195,18 +195,17 @@ public class SignPortGUI implements Listener {
         if (setup != null) {
             Location destination = setup.getSignLocation();
             plugin.getLogger().info("Destination location: " + destination);
-            if (plugin.isSafeLocation(destination) && plugin.checkCooldown(player)) {
-                plugin.getLogger().info("Location is safe and cooldown passed, attempting teleport");
-                player.teleport(destination);
-                player.sendMessage(ChatColor.GREEN + "You've been teleported to " + setup.getName());
-                plugin.getLogger().info("Player " + player.getName() + " teleported to " + signPortName);
-            } else {
-                if (!plugin.isSafeLocation(destination)) {
-                    player.sendMessage(ChatColor.RED + "The destination is not safe. Teleportation cancelled.");
-                    plugin.getLogger().info("Teleportation cancelled for " + player.getName() + " to " + signPortName + ". Unsafe location.");
+            if (plugin.isSafeLocation(destination)) {
+                if (plugin.checkCooldown(player)) {
+                    plugin.getLogger().info("Location is safe and cooldown passed, initiating teleport countdown");
+                    player.closeInventory(); // Close the GUI
+                    new TeleportTask(plugin, player, destination, signPortName).runTaskTimer(plugin, 0L, 20L);
                 } else {
                     plugin.getLogger().info("Teleportation cancelled for " + player.getName() + " to " + signPortName + ". Cooldown active.");
                 }
+            } else {
+                player.sendMessage(ChatColor.RED + "The destination is not safe. Teleportation cancelled.");
+                plugin.getLogger().info("Teleportation cancelled for " + player.getName() + " to " + signPortName + ". Unsafe location.");
             }
         } else {
             player.sendMessage(ChatColor.RED + "That SignPort no longer exists.");

@@ -63,7 +63,7 @@ public class SignPortCommand implements CommandExecutor {
             return false;
         }
 
-        if (plugin.playerHasReachedSignPortLimit(player)) {
+        if (plugin.playerHasSignPort(player)) {
             player.sendMessage(ChatColor.RED + "You have reached the maximum number of SignPorts you can create.");
             return false;
         }
@@ -145,9 +145,9 @@ public class SignPortCommand implements CommandExecutor {
             return false;
         }
 
-        player.teleport(destination);
-        player.sendMessage(ChatColor.GREEN + "You've been teleported to " + setup.getName() + ".");
-        plugin.getLogger().info("Player " + player.getName() + " teleported to " + name);
+        plugin.getLogger().info("Initiating teleport countdown for " + player.getName() + " to " + name);
+        player.sendMessage(ChatColor.YELLOW + "Preparing to teleport to " + setup.getName() + ". Don't move!");
+        new TeleportTask(plugin, player, destination, setup.getName()).runTaskTimer(plugin, 0L, 20L);
         return true;
     }
 

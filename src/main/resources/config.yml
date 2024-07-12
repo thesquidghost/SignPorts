@@ -18,6 +18,8 @@ max-signports-per-player: 1
 # Cooldown between SignPort uses (in seconds)
 teleport-cooldown: 10
 
+teleport-delay: 5  # Delay in seconds before teleportation occurs
+
 # Whether to allow cross-world teleportation
 allow-cross-world: true
 

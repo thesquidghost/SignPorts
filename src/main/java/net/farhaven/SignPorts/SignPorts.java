@@ -1,12 +1,10 @@
 package net.farhaven.SignPorts;
 
-import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.World;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.command.*;
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -15,11 +13,12 @@ import org.jetbrains.annotations.NotNull;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.logging.Level;
 
 public class SignPorts extends JavaPlugin {
     private SignPortMenu signPortMenu;
     private SignPortSetupManager signPortSetupManager;
-    private final Map<UUID, Boolean> playerHasSignPort = new HashMap<>();
+    private SignPortStorage signPortStorage;
     private final Map<UUID, Long> teleportCooldowns = new HashMap<>();
 
     @Override
@@ -40,7 +39,13 @@ public class SignPorts extends JavaPlugin {
         reloadConfig();
         teleportCooldowns.clear();
         signPortMenu.reloadSignPorts();
+        signPortStorage.loadSignPorts();
         getLogger().info("SignPorts configuration reloaded.");
+    }
+
+    @SuppressWarnings("unused")
+    public int getTeleportDelay() {
+        return getConfig().getInt("teleport-delay", 5); // Default to 5 seconds if not set
     }
 
     private boolean checkPluginAvailability(String pluginName, String warningMessage) {
@@ -53,9 +58,16 @@ public class SignPorts extends JavaPlugin {
     }
 
     private void initializeManagers() {
-        this.signPortMenu = new SignPortMenu(this);
-        this.signPortSetupManager = new SignPortSetupManager(this);
+        try {
+            this.signPortStorage = new SignPortStorage(this);
+            this.signPortMenu = new SignPortMenu(this);
+            this.signPortSetupManager = new SignPortSetupManager(this);
+            getLogger().info("Managers initialized successfully.");
+        } catch (Exception e) {
+            getLogger().log(Level.SEVERE, "Failed to initialize managers", e);
+        }
     }
+
 
     private void registerEventsAndCommands() {
         SignPortListener signListener = new SignPortListener(this);
@@ -93,30 +105,25 @@ public class SignPorts extends JavaPlugin {
     }
 
     private void loadSignPorts() {
-        Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
-            ConfigurationSection signports = getConfig().getConfigurationSection("signports");
-            if (signports != null) {
-                for (String key : signports.getKeys(false)) {
-                    ConfigurationSection signportSection = signports.getConfigurationSection(key);
-                    if (signportSection != null) {
-                        SignPortSetup setup = SignPortSetup.fromConfig(signportSection);
-
-                        // Run UI updates on the main thread
-                        Bukkit.getScheduler().runTask(this, () -> {
-                            signPortMenu.addSignPort(setup);
-                            setPlayerHasReachedSignPortLimit(setup.getOwnerUUID(), true);
-                        });
-                    }
-                }
-            }
-            getLogger().info("SignPorts loaded successfully.");
-        });
+        signPortStorage.loadSignPorts();
+        getLogger().info("SignPorts loaded successfully.");
     }
 
     @Override
     public void onDisable() {
+        try {
+            if (signPortStorage != null) {
+                signPortStorage.saveSignPorts();
+                getLogger().info("SignPorts data saved successfully.");
+            } else {
+                getLogger().warning("SignPortStorage was null during shutdown. SignPorts may not have been saved.");
+            }
+        } catch (Exception e) {
+            getLogger().log(Level.SEVERE, "An error occurred while saving SignPorts", e);
+        }
         getLogger().info("SignPorts is shutting down. Goodbye!");
     }
+
 
     @Override
     public boolean onCommand(@NotNull CommandSender sender, Command command, @NotNull String label, String[] args) {
@@ -140,29 +147,15 @@ public class SignPorts extends JavaPlugin {
         return signPortSetupManager;
     }
 
+    public boolean playerHasSignPort(Player player) {
+        return getSignPortMenu().getSignPortByOwner(player.getUniqueId()) != null;
+    }
+
     public void saveSignPort(SignPortSetup setup) {
-        Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
-            String name = setup.getName();
-            getLogger().info("Saving SignPort: '" + name + "'");
-            ConfigurationSection signportSection = getConfig().createSection("signports." + name);
-            setup.saveToConfig(signportSection);
-            saveConfig();
-
-            // Run any UI updates on the main thread
-            Bukkit.getScheduler().runTask(this, () -> {
-                signPortMenu.addSignPort(setup);
-                setPlayerHasReachedSignPortLimit(setup.getOwnerUUID(), true);
-                getLogger().info("SignPort saved and added to menu: '" + name + "'");
-            });
-        });
-    }
-
-    public boolean playerHasReachedSignPortLimit(Player player) {
-        return playerHasSignPort.getOrDefault(player.getUniqueId(), false);
-    }
-
-    public void setPlayerHasReachedSignPortLimit(UUID playerUUID, boolean hasReachedLimit) {
-        playerHasSignPort.put(playerUUID, hasReachedLimit);
+        getSignPortMenu().addSignPort(setup);
+        // If you have a separate storage class, you might want to save it there as well
+        // For example: getSignPortStorage().addSignPort(setup);
+        getLogger().info("SignPort saved and added to menu: '" + setup.getName() + "'");
     }
 
     public boolean isSafeLocation(Location location) {
@@ -230,7 +223,7 @@ public class SignPorts extends JavaPlugin {
     }
 
     public void updateSignPortName(Player player, String newName) {
-        SignPortSetup setup = signPortMenu.getSignPortByOwner(player.getUniqueId());
+        SignPortSetup setup = signPortStorage.getSignPort(player.getUniqueId());
         if (setup != null) {
             if (signPortMenu.getSignPortByName(newName) != null) {
                 player.sendMessage(ChatColor.RED + "A SignPort with that name already exists.");
@@ -240,7 +233,7 @@ public class SignPorts extends JavaPlugin {
             setup.setName(newName);
             signPortMenu.removeSignPort(oldName);
             signPortMenu.addSignPort(setup);
-            saveSignPort(setup);
+            signPortStorage.saveSignPorts();
             player.sendMessage(ChatColor.GREEN + "SignPort name updated to: " + newName);
         } else {
             player.sendMessage(ChatColor.RED + "You don't have a SignPort to edit.");
@@ -248,10 +241,10 @@ public class SignPorts extends JavaPlugin {
     }
 
     public void updateSignPortDescription(Player player, String newDescription) {
-        SignPortSetup setup = signPortMenu.getSignPortByOwner(player.getUniqueId());
+        SignPortSetup setup = signPortStorage.getSignPort(player.getUniqueId());
         if (setup != null) {
             setup.setDescription(newDescription);
-            saveSignPort(setup);
+            signPortStorage.saveSignPorts();
             player.sendMessage(ChatColor.GREEN + "SignPort description updated.");
         } else {
             player.sendMessage(ChatColor.RED + "You don't have a SignPort to edit.");
@@ -259,10 +252,10 @@ public class SignPorts extends JavaPlugin {
     }
 
     public void updateSignPortItem(Player player, ItemStack newItem) {
-        SignPortSetup setup = signPortMenu.getSignPortByOwner(player.getUniqueId());
+        SignPortSetup setup = signPortStorage.getSignPort(player.getUniqueId());
         if (setup != null) {
             setup.setGuiItem(newItem);
-            saveSignPort(setup);
+            signPortStorage.saveSignPorts();
             player.sendMessage(ChatColor.GREEN + "SignPort item updated to: " + newItem.getType());
         } else {
             player.sendMessage(ChatColor.RED + "You don't have a SignPort to edit.");

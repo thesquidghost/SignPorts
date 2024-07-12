@@ -18,12 +18,12 @@ commands:
   confirm:
     description: Confirm a SignPort action
     usage: /confirm
-    setname:
-      description: Set the name of your SignPort
-      usage: /setname <new name>
-    setdesc:
-      description: Set the description of your SignPort
-      usage: /setdesc <new description>
+  setname:
+    description: Set the name of your SignPort
+    usage: /setname <new name>
+  setdesc:
+    description: Set the description of your SignPort
+    usage: /setdesc <new description>
 
 depend: [GriefDefender, PlaceholderAPI]
 
