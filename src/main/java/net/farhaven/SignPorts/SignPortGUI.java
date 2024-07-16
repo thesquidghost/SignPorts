@@ -110,38 +110,29 @@ public class SignPortGUI implements Listener {
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
-        plugin.getLogger().info("Inventory click event triggered");
-        if (!event.getView().getTitle().equals(plugin.getConfig().getString("menu-name", "SignPorts Menu"))) {
-            plugin.getLogger().info("Not a SignPorts menu");
-            return;
+        // Check if the clicked inventory is a SignPorts menu
+        if (!event.getView().getTitle().equals(PlaceholderAPI.setPlaceholders((Player) event.getWhoClicked(), plugin.getConfig().getString("menu-name", "SignPorts Menu")))) {
+            return; // Not a SignPorts menu, so we don't need to do anything
         }
+
         event.setCancelled(true);
-        plugin.getLogger().info("SignPorts menu click detected");
         Player player = (Player) event.getWhoClicked();
         ItemStack clickedItem = event.getCurrentItem();
 
         if (clickedItem == null || clickedItem.getType() == Material.AIR) {
-            plugin.getLogger().info("Clicked on empty slot");
             return;
         }
 
         int slot = event.getRawSlot();
-        plugin.getLogger().info("Clicked on slot: " + slot);
 
         if (slot == 0) { // Close menu
-            plugin.getLogger().info("Closing menu");
             player.closeInventory();
         } else if (slot == 8) { // Edit SignPort
-            plugin.getLogger().info("Edit SignPort clicked");
             handleEditSignPort(player);
         } else if (slot == 45 || slot == 53) { // Previous or Next page
-            plugin.getLogger().info("Page navigation clicked");
             handlePageNavigation(player, clickedItem);
         } else if (slot >= 18 && slot <= 44) {
-            plugin.getLogger().info("SignPort item clicked");
             handleSignPortClick(player, clickedItem);
-        } else {
-            plugin.getLogger().info("Clicked on non-functional slot: " + slot);
         }
     }
 
