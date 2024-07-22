@@ -143,6 +143,10 @@ public class SignPorts extends JavaPlugin {
         return signPortMenu;
     }
 
+    public SignPortStorage getSignPortStorage() {
+	return signPortStorage;
+    }
+
     public SignPortSetupManager getSignPortSetupManager() {
         return signPortSetupManager;
     }
@@ -153,6 +157,7 @@ public class SignPorts extends JavaPlugin {
 
     public void saveSignPort(SignPortSetup setup) {
         getSignPortMenu().addSignPort(setup);
+        getSignPortStorage().addSignPort(setup);
         // If you have a separate storage class, you might want to save it there as well
         // For example: getSignPortStorage().addSignPort(setup);
         getLogger().info("SignPort saved and added to menu: '" + setup.getName() + "'");
@@ -233,7 +238,8 @@ public class SignPorts extends JavaPlugin {
             setup.setName(newName);
             signPortMenu.removeSignPort(oldName);
             signPortMenu.addSignPort(setup);
-            signPortStorage.saveSignPorts();
+	    signPortMenu.removeSignPort(oldName);
+	    signPortStorage.addSignPort(setup);
             player.sendMessage(ChatColor.GREEN + "SignPort name updated to: " + newName);
         } else {
             player.sendMessage(ChatColor.RED + "You don't have a SignPort to edit.");
