@@ -46,6 +46,10 @@ public class SignPortStorage {
         }
     }
 
+    public void getSignPorts() {
+	return new HashMap<>(signPorts);
+    }
+
     public void saveSignPorts() {
         for (SignPortSetup setup : signPorts.values()) {
             setup.saveToConfig(storageConfig.createSection(setup.getOwnerUUID().toString()));

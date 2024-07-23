@@ -21,6 +21,10 @@ public class SignPortMenu implements Listener {
         this.gui = new SignPortGUI(plugin);
     }
 
+    public void setSignPorts(Map<String, SignPortSetup> signPorts) {
+	this.signPorts = new HashMap<>(signPorts);
+    }
+
     public void openSignPortMenu(Player player) {
         gui.openSignPortMenu(player, 1);
     }

@@ -33,6 +33,7 @@ public class SignPorts extends JavaPlugin {
         initializeManagers();
         registerEventsAndCommands();
         loadSignPorts();
+	signPortMenu.setSignPorts(signPortStorage.getSignPorts())
     }
 
     public void reloadPluginConfig() {
