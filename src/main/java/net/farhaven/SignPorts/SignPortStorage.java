@@ -52,7 +52,7 @@ public class SignPortStorage {
 	    compatibleSignPorts.put(key.toString(), signPorts.get(key));
 	}
 
-	return compatibleSignPorts;
+	return (HashMap<String, SignPortSetup>) compatibleSignPorts;
     }
 
     public void saveSignPorts() {
