@@ -46,8 +46,13 @@ public class SignPortStorage {
         }
     }
 
-    public HashMap<UUID, SignPortSetup> getSignPorts() {
-	return new HashMap<UUID, SignPortSetup>(signPorts);
+    public HashMap<String, SignPortSetup> getSignPorts() {
+	Map<String, SignPortSetup> compatibleSignPorts = new HashMap<>();
+	for (UUID key : signPorts.keySet()) {
+	    compatibleSignPorts.put(key.toString(), signPorts.get(key))
+	}
+
+	return compatibleSignPorts;
     }
 
     public void saveSignPorts() {
