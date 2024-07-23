@@ -12,7 +12,7 @@ import java.util.UUID;
 
 public class SignPortMenu implements Listener {
     private final SignPorts plugin;
-    private final Map<String, SignPortSetup> signPorts;
+    private Map<String, SignPortSetup> signPorts;
     private final SignPortGUI gui;
 
     public SignPortMenu(SignPorts plugin) {
