@@ -47,7 +47,7 @@ public class SignPortStorage {
     }
 
     public void getSignPorts() {
-	return new HashMap<>(signPorts);
+	return new HashMap<UUID, SignPortSetup>(signPorts);
     }
 
     public void saveSignPorts() {

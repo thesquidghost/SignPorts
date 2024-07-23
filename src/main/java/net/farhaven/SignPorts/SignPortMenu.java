@@ -22,7 +22,7 @@ public class SignPortMenu implements Listener {
     }
 
     public void setSignPorts(Map<String, SignPortSetup> signPorts) {
-	this.signPorts = new HashMap<>(signPorts);
+	this.signPorts = new HashMap<String, SignPortSetup>(signPorts);
     }
 
     public void openSignPortMenu(Player player) {
