@@ -141,10 +141,10 @@ public class SignPortGUI implements Listener {
         if (meta != null && meta.hasLore()) {
             List<String> lore = meta.getLore();
             if (lore != null && !lore.isEmpty()) {
-                String firstLore = lore.getFirst();
+                String firstLore = lore.get(0);
                 if (firstLore.contains("Click to go to page")) {
-                    int currentPage = Integer.parseInt(firstLore.split(" ")[5]);
-                    openSignPortMenu(player, currentPage);
+                    int targetPage = Integer.parseInt(firstLore.split(" ")[5]);
+                    openSignPortMenu(player, targetPage);
                 }
             }
         }
@@ -182,26 +182,7 @@ public class SignPortGUI implements Listener {
         }
 
         plugin.getLogger().info("Player " + player.getName() + " clicked on SignPort: " + signPortName);
-        SignPortSetup setup = plugin.getSignPortMenu().getSignPortByName(signPortName);
-        if (setup != null) {
-            Location destination = setup.getSignLocation();
-            plugin.getLogger().info("Destination location: " + destination);
-            if (plugin.isSafeLocation(destination)) {
-                if (plugin.checkCooldown(player)) {
-                    plugin.getLogger().info("Location is safe and cooldown passed, initiating teleport countdown");
-                    player.closeInventory(); // Close the GUI
-                    new TeleportTask(plugin, player, destination, signPortName).runTaskTimer(plugin, 0L, 20L);
-                } else {
-                    plugin.getLogger().info("Teleportation cancelled for " + player.getName() + " to " + signPortName + ". Cooldown active.");
-                }
-            } else {
-                player.sendMessage(ChatColor.RED + "The destination is not safe. Teleportation cancelled.");
-                plugin.getLogger().info("Teleportation cancelled for " + player.getName() + " to " + signPortName + ". Unsafe location.");
-            }
-        } else {
-            player.sendMessage(ChatColor.RED + "That SignPort no longer exists.");
-            plugin.getLogger().info("SignPort not found: " + signPortName);
-        }
+        plugin.getSignPortMenu().handleSignPortClick(player, signPortName);
     }
 
     private String getClaimName(Location location) {

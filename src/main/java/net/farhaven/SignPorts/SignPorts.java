@@ -1,8 +1,8 @@
 package net.farhaven.SignPorts;
 
 import org.bukkit.ChatColor;
-import org.bukkit.World;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.command.*;
 import org.bukkit.entity.Player;
@@ -23,17 +23,27 @@ public class SignPorts extends JavaPlugin {
 
     @Override
     public void onEnable() {
+        getLogger().info("SignPorts is enabling...");
+
         if (checkPluginAvailability("GriefDefender", "GriefDefender not found! Disabling SignPorts.")) return;
-        if (checkPluginAvailability("PlaceholderAPI", "Could not find PlaceholderAPI! This plugin is required."))
-            return;
+        if (checkPluginAvailability("PlaceholderAPI", "Could not find PlaceholderAPI! This plugin is required.")) return;
 
         saveDefaultConfig();
-        getLogger().info("SignPorts is working hard!");
+        getLogger().info("Configuration loaded.");
 
-        initializeManagers();
-        registerEventsAndCommands();
-        loadSignPorts();
-	signPortMenu.setSignPorts(signPortStorage.getSignPorts());
+        try {
+            initializeManagers();
+            getLogger().info("Managers initialized.");
+            registerEventsAndCommands();
+            getLogger().info("Events and commands registered.");
+
+            // Register the server start listener
+            getServer().getPluginManager().registerEvents(new ServerStartListener(this), this);
+            getLogger().info("Server start listener registered.");
+        } catch (Exception e) {
+            getLogger().log(Level.SEVERE, "An error occurred during plugin initialization. Disabling SignPorts.", e);
+            getServer().getPluginManager().disablePlugin(this);
+        }
     }
 
     public void reloadPluginConfig() {
@@ -59,16 +69,10 @@ public class SignPorts extends JavaPlugin {
     }
 
     private void initializeManagers() {
-        try {
-            this.signPortStorage = new SignPortStorage(this);
-            this.signPortMenu = new SignPortMenu(this);
-            this.signPortSetupManager = new SignPortSetupManager(this);
-            getLogger().info("Managers initialized successfully.");
-        } catch (Exception e) {
-            getLogger().log(Level.SEVERE, "Failed to initialize managers", e);
-        }
+        this.signPortStorage = new SignPortStorage(this);
+        this.signPortMenu = new SignPortMenu(this);
+        this.signPortSetupManager = new SignPortSetupManager(this);
     }
-
 
     private void registerEventsAndCommands() {
         SignPortListener signListener = new SignPortListener(this);
@@ -105,9 +109,10 @@ public class SignPorts extends JavaPlugin {
         command.setTabCompleter(tabCompleter);
     }
 
-    private void loadSignPorts() {
+    public void loadSignPorts() {
         signPortStorage.loadSignPorts();
-        getLogger().info("SignPorts loaded successfully.");
+        signPortMenu.setSignPorts(signPortStorage.getSignPorts());
+        getLogger().info("SignPorts loaded successfully after delay. Total: " + signPortMenu.getSignPorts().size());
     }
 
     @Override
@@ -124,7 +129,6 @@ public class SignPorts extends JavaPlugin {
         }
         getLogger().info("SignPorts is shutting down. Goodbye!");
     }
-
 
     @Override
     public boolean onCommand(@NotNull CommandSender sender, Command command, @NotNull String label, String[] args) {
@@ -145,7 +149,7 @@ public class SignPorts extends JavaPlugin {
     }
 
     public SignPortStorage getSignPortStorage() {
-	return signPortStorage;
+        return signPortStorage;
     }
 
     public SignPortSetupManager getSignPortSetupManager() {
@@ -159,8 +163,6 @@ public class SignPorts extends JavaPlugin {
     public void saveSignPort(SignPortSetup setup) {
         getSignPortMenu().addSignPort(setup);
         getSignPortStorage().addSignPort(setup);
-        // If you have a separate storage class, you might want to save it there as well
-        // For example: getSignPortStorage().addSignPort(setup);
         getLogger().info("SignPort saved and added to menu: '" + setup.getName() + "'");
     }
 
@@ -239,8 +241,7 @@ public class SignPorts extends JavaPlugin {
             setup.setName(newName);
             signPortMenu.removeSignPort(oldName);
             signPortMenu.addSignPort(setup);
-	    signPortMenu.removeSignPort(oldName);
-	    signPortStorage.addSignPort(setup);
+            signPortStorage.addSignPort(setup);
             player.sendMessage(ChatColor.GREEN + "SignPort name updated to: " + newName);
         } else {
             player.sendMessage(ChatColor.RED + "You don't have a SignPort to edit.");

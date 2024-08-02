@@ -49,7 +49,7 @@ public class SignPortListener implements Listener {
             SignPortSetup setup = new SignPortSetup(location);
             setup.setOwnerUUID(player.getUniqueId());
             setup.setOwnerName(player.getName());
-            updateSignPortConfig(setup, player, event, signportIdentifier);
+            updateSignPortConfig(player, event, signportIdentifier);
             player.sendMessage(ChatColor.YELLOW + "Hold the item you want to use as the GUI icon and type " + ChatColor.AQUA + "/confirm" + ChatColor.YELLOW + " to proceed.");
             plugin.getSignPortSetupManager().startSetup(player, setup);
         }
@@ -77,14 +77,14 @@ public class SignPortListener implements Listener {
             return true;
         }
 
-        Claim claim = GriefDefender.getCore().getClaimManager(block.getWorld().getUID())
+        Claim claim = Objects.requireNonNull(GriefDefender.getCore().getClaimManager(block.getWorld().getUID()))
                 .getClaimAt(block.getLocation().getBlockX(), block.getLocation().getBlockY(), block.getLocation().getBlockZ());
 
         User user = GriefDefender.getCore().getUser(player.getUniqueId());
         return claim == null || claim.canBreak(block.getType(), block.getLocation(), user);
     }
 
-    private void updateSignPortConfig(SignPortSetup setup, Player player, SignChangeEvent event, String signportIdentifier) {
+    private void updateSignPortConfig(Player player, SignChangeEvent event, String signportIdentifier) {
         event.setLine(0, ChatColor.BLUE + signportIdentifier);
         event.setLine(1, ChatColor.GREEN + player.getName());
         event.setLine(2, "");
@@ -96,8 +96,7 @@ public class SignPortListener implements Listener {
         Block block = event.getBlock();
         Player player = event.getPlayer();
 
-        if (block.getState() instanceof Sign) {
-            Sign sign = (Sign) block.getState();
+        if (block.getState() instanceof Sign sign) {
             String signportIdentifier = plugin.getConfig().getString("signport-identifier", "[SignPort]");
             if (sign.getLine(0).equalsIgnoreCase(ChatColor.BLUE + signportIdentifier)) {
                 SignPortSetup setup = plugin.getSignPortMenu().getSignPortByLocation(block.getLocation());
@@ -119,8 +118,7 @@ public class SignPortListener implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onSignEdit(SignChangeEvent event) {
         Block block = event.getBlock();
-        if (block.getState() instanceof Sign) {
-            Sign sign = (Sign) block.getState();
+        if (block.getState() instanceof Sign sign) {
             String signportIdentifier = plugin.getConfig().getString("signport-identifier", "[SignPort]");
             if (sign.getLine(0).equalsIgnoreCase(ChatColor.BLUE + signportIdentifier)) {
                 Player player = event.getPlayer();
@@ -129,7 +127,7 @@ public class SignPortListener implements Listener {
                     if (!setup.getOwnerUUID().equals(player.getUniqueId())) {
                         event.setCancelled(true);
                         player.sendMessage(ChatColor.RED + "You don't have permission to edit this SignPort.");
-                    } else if (!event.getLine(0).equalsIgnoreCase(signportIdentifier)) {
+                    } else if (!Objects.requireNonNull(event.getLine(0)).equalsIgnoreCase(signportIdentifier)) {
                         plugin.getSignPortMenu().removeSignPort(setup.getName());
                         player.sendMessage(ChatColor.RED + "Your SignPort has been removed due to editing the sign.");
                         plugin.getLogger().warning("SignPort owned by " + player.getName() + " has been removed due to editing at " + block.getLocation());
@@ -141,8 +139,7 @@ public class SignPortListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onPlayerInteract(PlayerInteractEvent event) {
-        if (event.getClickedBlock() != null && event.getClickedBlock().getState() instanceof Sign) {
-            Sign sign = (Sign) event.getClickedBlock().getState();
+        if (event.getClickedBlock() != null && event.getClickedBlock().getState() instanceof Sign sign) {
             String signportIdentifier = plugin.getConfig().getString("signport-identifier", "[SignPort]");
             if (sign.getLine(0).equalsIgnoreCase(ChatColor.BLUE + signportIdentifier)) {
                 Player player = event.getPlayer();

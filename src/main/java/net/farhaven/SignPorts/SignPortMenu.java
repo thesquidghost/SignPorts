@@ -1,8 +1,8 @@
 package net.farhaven.SignPorts;
 
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.Location;
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 
@@ -22,7 +22,11 @@ public class SignPortMenu implements Listener {
     }
 
     public void setSignPorts(Map<String, SignPortSetup> signPorts) {
-	this.signPorts = new HashMap<String, SignPortSetup>(signPorts);
+        this.signPorts = new HashMap<>(signPorts);
+        plugin.getLogger().info("SignPorts set in menu. Total: " + signPorts.size());
+        for (Map.Entry<String, SignPortSetup> entry : signPorts.entrySet()) {
+            plugin.getLogger().info("SignPort in menu: " + entry.getValue().getName() + " by " + entry.getValue().getOwnerName());
+        }
     }
 
     public void openSignPortMenu(Player player) {
@@ -51,14 +55,7 @@ public class SignPortMenu implements Listener {
     }
 
     public SignPortSetup getSignPortByName(String name) {
-        plugin.getLogger().info("Searching for SignPort: '" + name + "'");
-        SignPortSetup setup = signPorts.get(name.toLowerCase());
-        if (setup != null) {
-            plugin.getLogger().info("SignPort found: '" + setup.getName() + "'");
-        } else {
-            plugin.getLogger().info("SignPort not found: '" + name + "'");
-        }
-        return setup;
+        return signPorts.get(name.toLowerCase());
     }
 
     public SignPortSetup getSignPortByOwner(UUID ownerUUID) {
@@ -73,18 +70,50 @@ public class SignPortMenu implements Listener {
     public void reloadSignPorts() {
         signPorts.clear();
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            ConfigurationSection signportsSection = plugin.getConfig().getConfigurationSection("signports");
-            if (signportsSection != null) {
-                for (String key : signportsSection.getKeys(false)) {
-                    ConfigurationSection signportSection = signportsSection.getConfigurationSection(key);
-                    if (signportSection != null) {
-                        SignPortSetup setup = SignPortSetup.fromConfig(signportSection);
-                        Bukkit.getScheduler().runTask(plugin, () -> addSignPort(setup));
-                    }
-                }
+            Map<String, SignPortSetup> loadedSignPorts = plugin.getSignPortStorage().getSignPorts();
+            for (SignPortSetup setup : loadedSignPorts.values()) {
+                Bukkit.getScheduler().runTask(plugin, () -> addSignPort(setup));
             }
-            plugin.getLogger().info("SignPorts reloaded successfully.");
+            plugin.getLogger().info("SignPorts reloaded successfully. Total: " + signPorts.size());
         });
     }
 
+    public void handleSignPortClick(Player player, String signPortName) {
+        SignPortSetup setup = getSignPortByName(signPortName);
+        if (setup == null) {
+            // Reload the configuration if the SignPort is not found
+            plugin.reloadPluginConfig();
+
+            // Re-check the SignPort existence after reloading
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                SignPortSetup reloadedSetup = getSignPortByName(signPortName);
+                if (reloadedSetup == null) {
+                    player.sendMessage(ChatColor.RED + "That SignPort no longer exists.");
+                    plugin.getLogger().info("SignPort not found: '" + signPortName + "' after reload.");
+                } else {
+                    // Handle the SignPort click normally
+                    handleValidSignPortClick(player, reloadedSetup);
+                }
+            }, 20L); // Delay to ensure the reload has completed
+        } else {
+            // Handle the SignPort click normally
+            handleValidSignPortClick(player, setup);
+        }
+    }
+
+    private void handleValidSignPortClick(Player player, SignPortSetup setup) {
+        Location location = setup.getSignLocation();
+        if (plugin.isSafeLocation(location)) {
+            if (plugin.checkCooldown(player)) {
+                plugin.getLogger().info("Location is safe and cooldown passed, initiating teleport countdown");
+                player.closeInventory(); // Close the GUI
+                new TeleportTask(plugin, player, location, setup.getName()).runTaskTimer(plugin, 0L, 20L);
+            } else {
+                plugin.getLogger().info("Teleportation cancelled for " + player.getName() + " to " + setup.getName() + ". Cooldown active.");
+            }
+        } else {
+            player.sendMessage(ChatColor.RED + "The destination is not safe. Teleportation cancelled.");
+            plugin.getLogger().info("Teleportation cancelled for " + player.getName() + " to " + setup.getName() + ". Unsafe location.");
+        }
+    }
 }
