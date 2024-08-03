@@ -4,8 +4,7 @@ SignPorts is a Bukkit/Spigot plugin that allows players to create and use sign-b
 
 ## Currently Known Issues and Projects:
 
-1. Saving / Loading persistence issues.
-2. Signports retain item metadata after setting an item as the port's menu icon.
+1. Signports retain item metadata after setting an item as the port's menu icon.
 
 ## Features
 
