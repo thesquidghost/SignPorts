@@ -8,7 +8,14 @@ version = '2.0-SNAPSHOT'
 
 repositories {
     mavenCentral()
-    maven { url = 'https://repo.extendedclip.com/content/repositories/placeholderapi/' }
+    maven {
+        url = 'https://jitpack.io'
+        // Add timeout settings
+        content {
+            includeGroup "com.github.PartlySunnyDev"
+        }
+    }
+    maven { url = 'https://repo.extendedclip.com/releases/' }
     maven { url = 'https://hub.spigotmc.org/nexus/content/repositories/snapshots/' }
     maven { url = 'https://repo.glaremasters.me/repository/bungeecord/' }
     maven { url = 'https://repo.glaremasters.me/repository/bloodshot/' }
@@ -20,16 +27,20 @@ dependencies {
     implementation 'org.apache.groovy:groovy:4.0.14'
     implementation 'net.luckperms:api:5.4'
     implementation 'com.griefdefender:api:2.1.0-SNAPSHOT'
-    implementation 'me.clip:placeholderapi:2.11.3'
+    compileOnly 'me.clip:placeholderapi:2.11.6'
     compileOnly 'org.spigotmc:spigot-api:1.20.6-R0.1-SNAPSHOT'
     compileOnly files('libs/TeamClaim.jar')
+    implementation('com.github.PartlySunnyDev:Sunbeam:1.3') {
+        exclude group: 'com.zaxxer', module: 'HikariCP'
+    }
+    implementation 'com.zaxxer:HikariCP:5.1.0'
     testImplementation platform('org.junit:junit-bom:5.10.0')
     testImplementation 'org.junit.jupiter:junit-jupiter'
 }
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(21) // Changed to Java 17 for better compatibility
+        languageVersion = JavaLanguageVersion.of(17) // Changed to match Sunbeam's requirement
     }
 }
 
