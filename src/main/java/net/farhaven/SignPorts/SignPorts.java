@@ -9,8 +9,10 @@ import org.bukkit.block.Block;
 import org.bukkit.command.*;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
+import dev.airfrom.teamclaim.Main;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -29,14 +31,15 @@ public class SignPorts extends JavaPlugin {
     public void onEnable() {
         getLogger().info("SignPorts is enabling...");
 
-        //if (checkPluginAvailability("GriefDefender", "GriefDefender not found! Disabling SignPorts.")) return;
         if (checkPluginAvailability("PlaceholderAPI", "Could not find PlaceholderAPI! This plugin is required.")) return;
 
-        if (getServer().getPluginManager().getPlugin("GriefDefender") != null) {
-            getLogger().info("GriefDefender found! Hooking into GriefDefender.");
-            griefDefenderHook = new GriefDefenderHookImpl();
+        // Initialize TeamClaim hook
+        Plugin teamClaimPlugin = getServer().getPluginManager().getPlugin("TeamClaim");
+        if (teamClaimPlugin != null && teamClaimPlugin instanceof Main) {
+            getLogger().info("TeamClaim found! Hooking into TeamClaim.");
+            griefDefenderHook = new TeamClaimHook((Main) teamClaimPlugin);
         } else {
-            getLogger().warning("GriefDefender not found! SignPorts will not be able to check for claims.");
+            getLogger().warning("TeamClaim not found! SignPorts will not be able to check for claims.");
             griefDefenderHook = new NoGDHook();
         }
 

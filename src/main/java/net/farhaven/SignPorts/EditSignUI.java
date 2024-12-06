@@ -28,15 +28,20 @@ public class EditSignUI implements MenuProvider {
     public EditSignUI(SignPorts plugin) {
         this.plugin = plugin;
     }
+    private boolean canEditSign(Player player, Location location) {
+        return SignPorts.griefDefenderHook.canPlayerBreakBlock(player, location.getBlock());
+    }
 
     @Override
     public Menu apply(Player player) {
         Menu menu = new Menu("Edit SignPort", 3);
         SignPortSetup setup = plugin.getSignPortMenu().getSignPortByLocation(editing.get(player.getUniqueId()));
-        if (setup == null) {
+
+        if (setup == null || !canEditSign(player, editing.get(player.getUniqueId()))) {
             menu.fillBackground(Material.BARRIER);
             return menu;
         }
+
         menu.fillBackground(Material.BLACK_STAINED_GLASS_PANE);
         ButtonItem rename = new ButtonItem(event -> {
             new ConversationFactory(plugin)

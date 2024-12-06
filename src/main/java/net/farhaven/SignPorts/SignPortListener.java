@@ -59,9 +59,15 @@ public class SignPortListener implements Listener {
     }
 
     private boolean hasPermissionToCreateSignPort(Player player, Location location) {
-
+        // Check if player is in their team's claim
         if (!SignPorts.griefDefenderHook.canPlayerMakeClaim(player, location)) {
-            player.sendMessage(ChatColor.RED + "You can only create SignPorts in your own claim.");
+            player.sendMessage(ChatColor.RED + "You can only create SignPorts in your team's claim.");
+            return false;
+        }
+
+        // Check if player has build permissions in this claim
+        if (!SignPorts.griefDefenderHook.canPlayerBreakBlock(player, location.getBlock())) {
+            player.sendMessage(ChatColor.RED + "You don't have build permissions in this claim.");
             return false;
         }
 
@@ -70,10 +76,13 @@ public class SignPortListener implements Listener {
 
     private boolean isPlayerAllowedToBreak(Player player, Block block) {
         SignPortSetup setup = plugin.getSignPortMenu().getSignPortByLocation(block.getLocation());
+
+        // If it's their SignPort, they can break it
         if (setup != null && setup.getOwnerUUID().equals(player.getUniqueId())) {
             return true;
         }
 
+        // Otherwise, check TeamClaim permissions
         return SignPorts.griefDefenderHook.canPlayerBreakBlock(player, block);
     }
 
@@ -88,7 +97,9 @@ public class SignPortListener implements Listener {
     public void onBlockBreak(BlockBreakEvent event) {
         Block brokenBlock = event.getBlock();
         Player player = event.getPlayer();
-        Block[] attached = {brokenBlock, brokenBlock.getRelative(BlockFace.DOWN), brokenBlock.getRelative(BlockFace.UP), brokenBlock.getRelative(BlockFace.NORTH), brokenBlock.getRelative(BlockFace.SOUTH), brokenBlock.getRelative(BlockFace.WEST), brokenBlock.getRelative(BlockFace.EAST)};
+        Block[] attached = {brokenBlock, brokenBlock.getRelative(BlockFace.DOWN), brokenBlock.getRelative(BlockFace.UP),
+                brokenBlock.getRelative(BlockFace.NORTH), brokenBlock.getRelative(BlockFace.SOUTH),
+                brokenBlock.getRelative(BlockFace.WEST), brokenBlock.getRelative(BlockFace.EAST)};
 
         for (Block block : attached) {
             if (block.getState() instanceof Sign sign) {
@@ -96,13 +107,18 @@ public class SignPortListener implements Listener {
                 if (sign.getLine(0).equalsIgnoreCase(ChatColor.BLUE + signportIdentifier)) {
                     SignPortSetup setup = plugin.getSignPortMenu().getSignPortByLocation(block.getLocation());
                     if (setup != null) {
-                        Block attachedBlock = block.getRelative(((WallSign) block.getBlockData()).getFacing().getOppositeFace());
-                        if (!attachedBlock.getLocation().equals(brokenBlock.getLocation())) {
-                            continue;
+                        // Check if the sign is attached to the broken block
+                        BlockData blockData = block.getBlockData();
+                        if (blockData instanceof WallSign) {
+                            Block attachedBlock = block.getRelative(((WallSign) blockData).getFacing().getOppositeFace());
+                            if (!attachedBlock.getLocation().equals(brokenBlock.getLocation())) {
+                                continue;
+                            }
                         }
+
                         if (!isPlayerAllowedToBreak(player, block)) {
                             event.setCancelled(true);
-                            player.sendMessage(ChatColor.RED + "You don't have permission to remove a close by SignPort.");
+                            player.sendMessage(ChatColor.RED + "You don't have permission to remove this SignPort.");
                             return;
                         }
 
@@ -124,7 +140,9 @@ public class SignPortListener implements Listener {
                 Player player = event.getPlayer();
                 SignPortSetup setup = plugin.getSignPortMenu().getSignPortByLocation(block.getLocation());
                 if (setup != null) {
-                    if (!setup.getOwnerUUID().equals(player.getUniqueId())) {
+                    // Check if player owns the SignPort or has team permissions
+                    if (!setup.getOwnerUUID().equals(player.getUniqueId()) &&
+                            !SignPorts.griefDefenderHook.canPlayerBreakBlock(player, block)) {
                         event.setCancelled(true);
                         player.sendMessage(ChatColor.RED + "You don't have permission to edit this SignPort.");
                     } else if (!Objects.requireNonNull(event.getLine(0)).equalsIgnoreCase(signportIdentifier)) {
@@ -144,15 +162,16 @@ public class SignPortListener implements Listener {
             if (sign.getLine(0).equalsIgnoreCase(ChatColor.BLUE + signportIdentifier)) {
                 Player player = event.getPlayer();
                 SignPortSetup setup = plugin.getSignPortMenu().getSignPortByLocation(event.getClickedBlock().getLocation());
-                if (setup != null && !setup.getOwnerUUID().equals(player.getUniqueId())) {
-                    event.setCancelled(true);
-                    // Optionally, you can add a message here if you want to inform the player
-                    player.sendMessage(ChatColor.RED + "You don't have permission to interact with this SignPort.");
-                } else {
-                    if (player.isSneaking()) {
+                if (setup != null) {
+                    // Check if player owns the SignPort or has team permissions
+                    if (!setup.getOwnerUUID().equals(player.getUniqueId()) &&
+                            !SignPorts.griefDefenderHook.canPlayerBreakBlock(player, event.getClickedBlock())) {
                         event.setCancelled(true);
-                        EditSignUI.editing.put(event.getPlayer().getUniqueId(), event.getClickedBlock().getLocation());
-                        Menus.open(event.getPlayer(), "editsignport");
+                        player.sendMessage(ChatColor.RED + "You don't have permission to interact with this SignPort.");
+                    } else if (player.isSneaking()) {
+                        event.setCancelled(true);
+                        EditSignUI.editing.put(player.getUniqueId(), event.getClickedBlock().getLocation());
+                        Menus.open(player, "editsignport");
                     }
                 }
             }
