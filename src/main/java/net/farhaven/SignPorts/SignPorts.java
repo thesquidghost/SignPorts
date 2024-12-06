@@ -1,5 +1,7 @@
 package net.farhaven.SignPorts;
 
+import me.partlysunny.sunbeam.Sunbeam;
+import me.partlysunny.sunbeam.menu.Menus;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -21,12 +23,25 @@ public class SignPorts extends JavaPlugin {
     private SignPortStorage signPortStorage;
     private final Map<UUID, Long> teleportCooldowns = new HashMap<>();
 
+    public static GriefDefenderHook griefDefenderHook;
+
     @Override
     public void onEnable() {
         getLogger().info("SignPorts is enabling...");
 
-        if (checkPluginAvailability("GriefDefender", "GriefDefender not found! Disabling SignPorts.")) return;
+        //if (checkPluginAvailability("GriefDefender", "GriefDefender not found! Disabling SignPorts.")) return;
         if (checkPluginAvailability("PlaceholderAPI", "Could not find PlaceholderAPI! This plugin is required.")) return;
+
+        if (getServer().getPluginManager().getPlugin("GriefDefender") != null) {
+            getLogger().info("GriefDefender found! Hooking into GriefDefender.");
+            griefDefenderHook = new GriefDefenderHookImpl();
+        } else {
+            getLogger().warning("GriefDefender not found! SignPorts will not be able to check for claims.");
+            griefDefenderHook = new NoGDHook();
+        }
+
+        Sunbeam.init(this);
+        Menus.registerMenu("editsignport", new EditSignUI(this));
 
         saveDefaultConfig();
         getLogger().info("Configuration loaded.");
@@ -243,6 +258,17 @@ public class SignPorts extends JavaPlugin {
             signPortMenu.addSignPort(setup);
             signPortStorage.addSignPort(setup);
             player.sendMessage(ChatColor.GREEN + "SignPort name updated to: " + newName);
+        } else {
+            player.sendMessage(ChatColor.RED + "You don't have a SignPort to edit.");
+        }
+    }
+
+    public void updateSignPortLocked(Player player, boolean locked) {
+        SignPortSetup setup = signPortStorage.getSignPort(player.getUniqueId());
+        if (setup != null) {
+            setup.setLocked(locked);
+            signPortStorage.saveSignPorts();
+            player.sendMessage(ChatColor.GREEN + "SignPort locked status updated.");
         } else {
             player.sendMessage(ChatColor.RED + "You don't have a SignPort to edit.");
         }

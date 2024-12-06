@@ -107,6 +107,10 @@ public class SignPortMenu implements Listener {
             if (plugin.checkCooldown(player)) {
                 plugin.getLogger().info("Location is safe and cooldown passed, initiating teleport countdown");
                 player.closeInventory(); // Close the GUI
+                if (setup.isLocked()) {
+                    player.sendMessage(ChatColor.RED + "This SignPort is locked and cannot be teleported to.");
+                    return;
+                }
                 new TeleportTask(plugin, player, location, setup.getName()).runTaskTimer(plugin, 0L, 20L);
             } else {
                 plugin.getLogger().info("Teleportation cancelled for " + player.getName() + " to " + setup.getName() + ". Cooldown active.");

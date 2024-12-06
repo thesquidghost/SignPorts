@@ -13,11 +13,6 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
-import com.griefdefender.api.GriefDefender;
-import com.griefdefender.api.claim.Claim;
-import com.griefdefender.api.claim.ClaimManager;
-import com.griefdefender.lib.flowpowered.math.vector.Vector3i;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -63,6 +58,7 @@ public class SignPortGUI implements Listener {
                 lore.add(ChatColor.ITALIC + "" + ChatColor.GOLD + "Owner: " + setup.getOwnerName());
                 lore.add(ChatColor.ITALIC + "" + ChatColor.AQUA + setup.getDescription());
                 lore.add(ChatColor.GRAY + "Claim: " + getClaimName(setup.getSignLocation()));
+                lore.add(ChatColor.GRAY + "Locked: " + (setup.isLocked() ? ChatColor.RED + "Yes" : ChatColor.GREEN + "No"));
                 meta.setLore(lore);
                 item.setItemMeta(meta);
             }
@@ -186,22 +182,6 @@ public class SignPortGUI implements Listener {
     }
 
     private String getClaimName(Location location) {
-        if (location == null || location.getWorld() == null) {
-            return "Unknown";
-        }
-
-        ClaimManager claimManager = GriefDefender.getCore().getClaimManager(location.getWorld().getUID());
-        if (claimManager == null) {
-            return "Wilderness";
-        }
-
-        Vector3i vector3i = Vector3i.from(location.getBlockX(), location.getBlockY(), location.getBlockZ());
-        Claim claim = claimManager.getClaimAt(vector3i);
-
-        if (claim != null) {
-            String ownerName = claim.getOwnerName();
-            return ownerName != null ? ownerName + "'s Claim" : "Claim-" + claim.getUniqueId().toString().substring(0, 8);
-        }
-        return "Wilderness";
+        return SignPorts.griefDefenderHook.getClaimName(location);
     }
 }

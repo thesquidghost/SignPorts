@@ -19,6 +19,8 @@ public class SignPortSetup {
     private String description;
     @Expose
     private ItemStack guiItem;
+    @Expose
+    private boolean locked;
 
     public SignPortSetup(Location signLocation) {
         this.signLocation = signLocation;
@@ -41,4 +43,7 @@ public class SignPortSetup {
 
     public ItemStack getGuiItem() { return guiItem; }
     public void setGuiItem(ItemStack guiItem) { this.guiItem = guiItem; }
+
+    public boolean isLocked() { return locked; }
+    public void setLocked(boolean locked) { this.locked = locked; }
 }

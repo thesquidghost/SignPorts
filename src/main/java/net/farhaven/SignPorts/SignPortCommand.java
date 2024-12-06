@@ -146,6 +146,10 @@ public class SignPortCommand implements CommandExecutor {
         }
 
         plugin.getLogger().info("Initiating teleport countdown for " + player.getName() + " to " + name);
+        if (setup.isLocked()) {
+            player.sendMessage(ChatColor.RED + "This SignPort is locked and cannot be teleported to.");
+            return true;
+        }
         player.sendMessage(ChatColor.YELLOW + "Preparing to teleport to " + setup.getName() + ". Don't move!");
         new TeleportTask(plugin, player, destination, setup.getName()).runTaskTimer(plugin, 0L, 20L);
         return true;

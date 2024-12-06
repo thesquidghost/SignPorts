@@ -25,7 +25,8 @@ commands:
     description: Set the description of your SignPort
     usage: /setdesc <new description>
 
-depend: [GriefDefender, PlaceholderAPI]
+depend: [PlaceholderAPI]
+soft-depend: [GriefDefender]
 
 permissions:
   signports.create:
