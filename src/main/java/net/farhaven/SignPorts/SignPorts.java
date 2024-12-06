@@ -12,7 +12,6 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
-import dev.airfrom.teamclaim.Main;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -35,9 +34,9 @@ public class SignPorts extends JavaPlugin {
 
         // Initialize TeamClaim hook
         Plugin teamClaimPlugin = getServer().getPluginManager().getPlugin("TeamClaim");
-        if (teamClaimPlugin != null && teamClaimPlugin instanceof Main) {
+        if (teamClaimPlugin != null && teamClaimPlugin instanceof dev.airfrom.teamclaim.Main) {
             getLogger().info("TeamClaim found! Hooking into TeamClaim.");
-            griefDefenderHook = new TeamClaimHook((Main) teamClaimPlugin);
+            griefDefenderHook = new TeamClaimHook((dev.airfrom.teamclaim.Main) teamClaimPlugin);
         } else {
             getLogger().warning("TeamClaim not found! SignPorts will not be able to check for claims.");
             griefDefenderHook = new NoGDHook();

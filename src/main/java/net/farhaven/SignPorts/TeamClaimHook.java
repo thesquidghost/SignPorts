@@ -1,15 +1,19 @@
 package net.farhaven.SignPorts;
 
-import com.sun.tools.javac.Main;
-import net.farhaven.SignPorts.GriefDefenderHook;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
+import dev.airfrom.teamclaim.data.ClaimedLand;
+import dev.airfrom.teamclaim.data.Permission;
+import dev.airfrom.teamclaim.data.PlayerData;
+import dev.airfrom.teamclaim.data.Region;
+import dev.airfrom.teamclaim.data.Team;
 
 public class TeamClaimHook implements GriefDefenderHook {
-    private Main teamClaimPlugin;
+    // Use fully qualified name here
+    private final dev.airfrom.teamclaim.Main teamClaimPlugin;
 
-    public TeamClaimHook(Main teamClaimPlugin) {
+    public TeamClaimHook(dev.airfrom.teamclaim.Main teamClaimPlugin) {
         this.teamClaimPlugin = teamClaimPlugin;
     }
 
