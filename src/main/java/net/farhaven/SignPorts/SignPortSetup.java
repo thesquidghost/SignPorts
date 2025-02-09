@@ -19,26 +19,58 @@ public class SignPortSetup {
     private String description;
     @Expose
     private ItemStack guiItem;
+    @Expose
+    private boolean locked;  // New field for lock status
 
     public SignPortSetup(Location signLocation) {
         this.signLocation = signLocation;
+        this.locked = false; // default unlocked
     }
 
     // Getters and setters
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
+    public String getName() {
+        return name;
+    }
+    public void setName(String name) {
+        this.name = name;
+    }
 
-    public Location getSignLocation() { return signLocation; }
+    public Location getSignLocation() {
+        return signLocation;
+    }
 
-    public String getOwnerName() { return ownerName; }
-    public void setOwnerName(String ownerName) { this.ownerName = ownerName; }
+    public String getOwnerName() {
+        return ownerName;
+    }
+    public void setOwnerName(String ownerName) {
+        this.ownerName = ownerName;
+    }
 
-    public UUID getOwnerUUID() { return ownerUUID; }
-    public void setOwnerUUID(UUID ownerUUID) { this.ownerUUID = ownerUUID; }
+    public UUID getOwnerUUID() {
+        return ownerUUID;
+    }
+    public void setOwnerUUID(UUID ownerUUID) {
+        this.ownerUUID = ownerUUID;
+    }
 
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
+    public String getDescription() {
+        return description;
+    }
+    public void setDescription(String description) {
+        this.description = description;
+    }
 
-    public ItemStack getGuiItem() { return guiItem; }
-    public void setGuiItem(ItemStack guiItem) { this.guiItem = guiItem; }
+    public ItemStack getGuiItem() {
+        return guiItem;
+    }
+    public void setGuiItem(ItemStack guiItem) {
+        this.guiItem = guiItem;
+    }
+
+    public boolean isLocked() {
+        return locked;
+    }
+    public void setLocked(boolean locked) {
+        this.locked = locked;
+    }
 }

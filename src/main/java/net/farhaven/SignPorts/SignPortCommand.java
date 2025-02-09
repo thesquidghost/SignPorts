@@ -8,6 +8,8 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.enchantments.Enchantment;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Map;
@@ -56,18 +58,15 @@ public class SignPortCommand implements CommandExecutor {
             player.sendMessage(ChatColor.RED + "Usage: /signport create <name>");
             return false;
         }
-
         String name = args[1];
         if (plugin.getSignPortMenu().getSignPortByName(name) != null) {
             player.sendMessage(ChatColor.RED + "A SignPort with that name already exists.");
             return false;
         }
-
         if (plugin.playerHasSignPort(player)) {
             player.sendMessage(ChatColor.RED + "You have reached the maximum number of SignPorts you can create.");
             return false;
         }
-
         Location location = player.getLocation();
         SignPortSetup setup = new SignPortSetup(location);
         setup.setName(name);
@@ -84,15 +83,22 @@ public class SignPortCommand implements CommandExecutor {
             player.sendMessage(ChatColor.YELLOW + "There are no SignPorts available.");
             return false;
         }
-
         player.sendMessage(ChatColor.GREEN + "Available SignPorts:");
         for (SignPortSetup setup : signPorts.values()) {
-            player.sendMessage(ChatColor.YELLOW + "- " + setup.getName() + " (Owner: " + setup.getOwnerName() + ")");
+            // Name displayed in red if locked and green if unlocked.
+            String color = setup.isLocked() ? ChatColor.RED.toString() : ChatColor.GREEN.toString();
+            player.sendMessage(color + "- " + setup.getName() + ChatColor.YELLOW + " (Owner: " + setup.getOwnerName() + ")");
         }
         return true;
     }
 
     private boolean handleRemove(Player player, String[] args) {
+        // Only allow op players to execute this command.
+        if (!player.isOp()) {
+            player.sendMessage(ChatColor.RED + "Only operators can remove a SignPort.");
+            return false;
+        }
+
         if (args.length < 2) {
             player.sendMessage(ChatColor.RED + "Usage: /signport remove <name>");
             return false;
@@ -105,11 +111,7 @@ public class SignPortCommand implements CommandExecutor {
             return false;
         }
 
-        if (!setup.getOwnerUUID().equals(player.getUniqueId()) && !player.hasPermission("signports.admin")) {
-            player.sendMessage(ChatColor.RED + "You don't have permission to remove this SignPort.");
-            return false;
-        }
-
+        // Removal is allowed because the player is op.
         plugin.getSignPortMenu().removeSignPort(name);
         player.sendMessage(ChatColor.GREEN + "SignPort '" + name + "' has been removed.");
         return true;
@@ -120,31 +122,30 @@ public class SignPortCommand implements CommandExecutor {
             player.sendMessage(ChatColor.RED + "Usage: /signport teleport <name>");
             return false;
         }
-
         String name = String.join(" ", Arrays.copyOfRange(args, 1, args.length));
         plugin.getLogger().info("Attempting to teleport to: '" + name + "'");
-
         SignPortSetup setup = plugin.getSignPortMenu().getSignPortByName(name);
         if (setup == null) {
             plugin.getLogger().info("SignPort not found: '" + name + "'");
             player.sendMessage(ChatColor.RED + "No SignPort found with that name.");
             return false;
         }
-
+        // Only block teleport for non-owners if locked.
+        if (setup.isLocked() && !setup.getOwnerUUID().equals(player.getUniqueId())) {
+            player.sendMessage(ChatColor.RED + "This SignPort is locked by its owner.");
+            return false;
+        }
         Location destination = setup.getSignLocation();
         plugin.getLogger().info("Destination location: " + destination);
-
         if (!plugin.isSafeLocation(destination)) {
             plugin.getLogger().info("Destination is not safe: " + destination);
             player.sendMessage(ChatColor.RED + "The destination is not safe. Teleportation cancelled.");
             return false;
         }
-
         if (!plugin.checkCooldown(player)) {
             plugin.getLogger().info("Teleportation cancelled for " + player.getName() + " to " + name + ". Cooldown active.");
             return false;
         }
-
         plugin.getLogger().info("Initiating teleport countdown for " + player.getName() + " to " + name);
         player.sendMessage(ChatColor.YELLOW + "Preparing to teleport to " + setup.getName() + ". Don't move!");
         new TeleportTask(plugin, player, destination, setup.getName()).runTaskTimer(plugin, 0L, 20L);
@@ -186,7 +187,17 @@ public class SignPortCommand implements CommandExecutor {
             player.sendMessage(ChatColor.RED + "You must be holding an item to set as the SignPort icon.");
             return false;
         }
-        plugin.updateSignPortItem(player, itemInHand);
+        // Clone and remove extra metadata (lore/enchantments).
+        ItemStack sanitizedItem = itemInHand.clone();
+        if (sanitizedItem.hasItemMeta()) {
+            ItemMeta meta = sanitizedItem.getItemMeta();
+            meta.setLore(null);
+            for (Enchantment enchant : meta.getEnchants().keySet()) {
+                meta.removeEnchant(enchant);
+            }
+            sanitizedItem.setItemMeta(meta);
+        }
+        plugin.updateSignPortItem(player, sanitizedItem);
         return true;
     }
 

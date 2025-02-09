@@ -12,14 +12,14 @@ public class ItemStackAdapter implements JsonSerializer<ItemStack>, JsonDeserial
         JsonObject obj = new JsonObject();
         obj.addProperty("type", src.getType().toString());
         obj.addProperty("amount", src.getAmount());
-        // Add more properties if needed
+        // You can add more properties here (e.g., meta data, enchantments) if needed.
         return obj;
     }
 
     @Override
     public ItemStack deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
         JsonObject obj = json.getAsJsonObject();
-        // Restore more properties if needed
+        // Restore additional properties here if needed.
         return new ItemStack(org.bukkit.Material.valueOf(obj.get("type").getAsString()), obj.get("amount").getAsInt());
     }
 }

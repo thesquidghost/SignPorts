@@ -13,7 +13,8 @@ public class LocationAdapter implements JsonSerializer<Location>, JsonDeserializ
     @Override
     public JsonElement serialize(Location src, Type typeOfSrc, JsonSerializationContext context) {
         JsonObject obj = new JsonObject();
-        obj.addProperty("world", Objects.requireNonNull(src.getWorld()).getName());
+        // Ensure that world isn't null (it shouldn't be)
+        obj.addProperty("world", Objects.requireNonNull(src.getWorld(), "World cannot be null").getName());
         obj.addProperty("x", src.getX());
         obj.addProperty("y", src.getY());
         obj.addProperty("z", src.getZ());
@@ -25,7 +26,11 @@ public class LocationAdapter implements JsonSerializer<Location>, JsonDeserializ
     @Override
     public Location deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
         JsonObject obj = json.getAsJsonObject();
-        World world = Bukkit.getWorld(obj.get("world").getAsString());
+        String worldName = obj.get("world").getAsString();
+        World world = Bukkit.getWorld(worldName);
+        if (world == null) {
+            throw new JsonParseException("World '" + worldName + "' could not be found");
+        }
         double x = obj.get("x").getAsDouble();
         double y = obj.get("y").getAsDouble();
         double z = obj.get("z").getAsDouble();

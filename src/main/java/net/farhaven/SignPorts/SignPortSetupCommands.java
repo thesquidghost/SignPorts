@@ -18,14 +18,17 @@ public class SignPortSetupCommands implements CommandExecutor {
     }
 
     @Override
-    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, String[] args) {
+    public boolean onCommand(
+            @NotNull CommandSender sender,
+            @NotNull Command command,
+            @NotNull String label,
+            String[] args) {
         if (!(sender instanceof Player player)) {
             sender.sendMessage(ChatColor.RED + "Only players can use this command.");
             return true;
         }
 
         SignPortSetup setup = plugin.getSignPortSetupManager().getPendingSetup(player);
-
         if (setup == null) {
             player.sendMessage(ChatColor.RED + "You are not currently setting up a SignPort.");
             return true;
@@ -49,7 +52,8 @@ public class SignPortSetupCommands implements CommandExecutor {
         itemInHand.setAmount(1);
         SignPortSetup setup = plugin.getSignPortSetupManager().getPendingSetup(player);
         setup.setGuiItem(itemInHand);
-        player.sendMessage(ChatColor.YELLOW + "Item set. Now type /setname <name> to set the name for the SignPort.");
+        player.sendMessage(ChatColor.YELLOW
+                + "Item set. Now type /setname <name> to set the name for the SignPort.");
         plugin.getSignPortSetupManager().updatePendingSetup(player, setup);
         return true;
     }
@@ -62,7 +66,8 @@ public class SignPortSetupCommands implements CommandExecutor {
 
         String name = String.join(" ", args);
         if (plugin.getSignPortMenu().getSignPortByName(name) != null) {
-            player.sendMessage(ChatColor.RED + "A SignPort with that name already exists. Please choose a different name.");
+            player.sendMessage(ChatColor.RED
+                    + "A SignPort with that name already exists. Please choose a different name.");
             return false;
         }
 
@@ -82,10 +87,10 @@ public class SignPortSetupCommands implements CommandExecutor {
         String description = String.join(" ", args);
         SignPortSetup setup = plugin.getSignPortSetupManager().getPendingSetup(player);
         setup.setDescription(description);
-        player.sendMessage(ChatColor.GREEN + "SignPort setup complete. Your SignPort '" + setup.getName() + "' is now active!");
+        player.sendMessage(ChatColor.GREEN + "SignPort setup complete. Your SignPort '"
+                + setup.getName() + "' is now active!");
         plugin.getSignPortSetupManager().completePendingSetup(player);
         plugin.saveSignPort(setup);
-
         return true;
     }
 }

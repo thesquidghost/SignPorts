@@ -20,8 +20,8 @@ dependencies {
     implementation 'org.apache.groovy:groovy:4.0.14'
     implementation 'net.luckperms:api:5.4'
     implementation 'com.griefdefender:api:2.1.0-SNAPSHOT'
-    implementation 'me.clip:placeholderapi:2.11.3'
-    compileOnly 'org.spigotmc:spigot-api:1.20.6-R0.1-SNAPSHOT'
+    implementation 'me.clip:placeholderapi:2.11.6' // Updated version
+    compileOnly 'org.spigotmc:spigot-api:1.21-R0.1-SNAPSHOT'
     testImplementation platform('org.junit:junit-bom:5.10.0')
     testImplementation 'org.junit.jupiter:junit-jupiter'
 }

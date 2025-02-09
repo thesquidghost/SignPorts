@@ -19,6 +19,7 @@ public class SignPorts extends JavaPlugin {
     private SignPortMenu signPortMenu;
     private SignPortSetupManager signPortSetupManager;
     private SignPortStorage signPortStorage;
+    private SignPortLockGUI signPortLockGUI;   // New lock GUI instance.
     private final Map<UUID, Long> teleportCooldowns = new HashMap<>();
 
     @Override
@@ -78,10 +79,12 @@ public class SignPorts extends JavaPlugin {
         SignPortListener signListener = new SignPortListener(this);
         SignPortGUI signPortGUI = new SignPortGUI(this);
         SignPortSetupCommands setupCommands = new SignPortSetupCommands(this);
+        signPortLockGUI = new SignPortLockGUI(this);  // Initialize locking GUI
 
         getServer().getPluginManager().registerEvents(signListener, this);
         getServer().getPluginManager().registerEvents(signPortGUI, this);
         getServer().getPluginManager().registerEvents(signPortMenu, this);
+        getServer().getPluginManager().registerEvents(signPortLockGUI, this); // Register lock GUI events
 
         registerCommand("signport", new SignPortCommand(this));
         registerCommandWithTabCompleter(new SignPortTabCompleter(this));
@@ -154,6 +157,11 @@ public class SignPorts extends JavaPlugin {
 
     public SignPortSetupManager getSignPortSetupManager() {
         return signPortSetupManager;
+    }
+
+    // Expose the lock GUI so other parts of our plugin can open it.
+    public SignPortLockGUI getLockGUI() {
+        return signPortLockGUI;
     }
 
     public boolean playerHasSignPort(Player player) {

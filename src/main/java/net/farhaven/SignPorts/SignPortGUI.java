@@ -31,49 +31,65 @@ public class SignPortGUI implements Listener {
     }
 
     public void openSignPortMenu(Player player, int page) {
+        // Convert our signports map to a list.
         List<SignPortSetup> signPorts = new ArrayList<>(plugin.getSignPortMenu().getSignPorts().values());
         int totalPages = (int) Math.ceil((double) signPorts.size() / PAGE_SIZE);
-        page = Math.max(1, Math.min(page, totalPages));
+        page = Math.max(1, Math.min(page, totalPages > 0 ? totalPages : 1));
 
-        Inventory menu = Bukkit.createInventory(null, 54, PlaceholderAPI.setPlaceholders(player, plugin.getConfig().getString("menu-name", "SignPorts Menu")));
+        String menuTitle = getMenuTitle(player);
+        Inventory menu = Bukkit.createInventory(null, 54, menuTitle);
 
-        // Add navigation and functional items
+        // Set navigation and functional items.
         menu.setItem(0, createGuiItem(Material.REDSTONE, ChatColor.RED + "Close Menu"));
         menu.setItem(8, createGuiItem(Material.BEACON, ChatColor.AQUA + "Edit Your SignPort"));
         menu.setItem(45, createGuiItem(Material.ARROW, ChatColor.YELLOW + "Previous Page"));
         menu.setItem(53, createGuiItem(Material.ARROW, ChatColor.YELLOW + "Next Page"));
 
-        // Fill empty slots with black glass panes
+        // Fill empty slots with black glass panes.
         for (int i = 0; i < 54; i++) {
             if (menu.getItem(i) == null) {
                 menu.setItem(i, createGuiItem(Material.BLACK_STAINED_GLASS_PANE, " "));
             }
         }
 
-        // Populate the inventory with SignPort items
+        // Populate the inventory with SignPort items.
         int startIndex = (page - 1) * PAGE_SIZE;
         for (int i = 0; i < PAGE_SIZE && startIndex + i < signPorts.size(); i++) {
             SignPortSetup setup = signPorts.get(startIndex + i);
             ItemStack item = setup.getGuiItem().clone();
-            item.setAmount(1); // Ensure only one item is displayed
+            item.setAmount(1); // Ensure only one item is displayed.
             ItemMeta meta = item.getItemMeta();
             if (meta != null) {
+                // Set a random color for display name.
                 meta.setDisplayName(getRandomColor() + setup.getName());
+
                 List<String> lore = new ArrayList<>();
                 lore.add(ChatColor.ITALIC + "" + ChatColor.GOLD + "Owner: " + setup.getOwnerName());
                 lore.add(ChatColor.ITALIC + "" + ChatColor.AQUA + setup.getDescription());
-                lore.add(ChatColor.GRAY + "Claim: " + getClaimName(setup.getSignLocation()));
+                // Add extra line indicating the lock status.
+                if (setup.isLocked()) {
+                    lore.add(ChatColor.RED + "Locked");
+                } else {
+                    lore.add(ChatColor.GREEN + "Unlocked");
+                }
                 meta.setLore(lore);
                 item.setItemMeta(meta);
             }
-            menu.setItem(18 + i + (i / 7) * 2, item);
+            // Calculate slot (4 rows of 7 items starting from slot 18 with 2 gap rows).
+            int slot = 18 + i + (i / 7) * 2;
+            menu.setItem(slot, item);
         }
 
-        // Update navigation item lore with page info
+        // Update navigation items with page info.
         updateNavigationItem(menu, 45, page > 1, page - 1);
         updateNavigationItem(menu, 53, page < totalPages, page + 1);
 
         player.openInventory(menu);
+    }
+
+    private String getMenuTitle(Player player) {
+        String rawTitle = plugin.getConfig().getString("menu-name", "SignPorts Menu");
+        return PlaceholderAPI.setPlaceholders(player, rawTitle);
     }
 
     private ChatColor getRandomColor() {
@@ -110,13 +126,19 @@ public class SignPortGUI implements Listener {
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
-        // Check if the clicked inventory is a SignPorts menu
-        if (!event.getView().getTitle().equals(PlaceholderAPI.setPlaceholders((Player) event.getWhoClicked(), plugin.getConfig().getString("menu-name", "SignPorts Menu")))) {
-            return; // Not a SignPorts menu, so we don't need to do anything
+        // Ensure the clicker is a player.
+        if (!(event.getWhoClicked() instanceof Player)) {
+            return;
+        }
+        Player player = (Player) event.getWhoClicked();
+        String menuTitle = getMenuTitle(player);
+
+        // Check if the clicked inventory is the SignPorts menu.
+        if (!event.getView().getTitle().equals(menuTitle)) {
+            return;
         }
 
         event.setCancelled(true);
-        Player player = (Player) event.getWhoClicked();
         ItemStack clickedItem = event.getCurrentItem();
 
         if (clickedItem == null || clickedItem.getType() == Material.AIR) {
@@ -125,11 +147,11 @@ public class SignPortGUI implements Listener {
 
         int slot = event.getRawSlot();
 
-        if (slot == 0) { // Close menu
+        if (slot == 0) { // Close menu.
             player.closeInventory();
-        } else if (slot == 8) { // Edit SignPort
+        } else if (slot == 8) { // Edit SignPort.
             handleEditSignPort(player);
-        } else if (slot == 45 || slot == 53) { // Previous or Next page
+        } else if (slot == 45 || slot == 53) { // Previous or Next page.
             handlePageNavigation(player, clickedItem);
         } else if (slot >= 18 && slot <= 44) {
             handleSignPortClick(player, clickedItem);
@@ -143,17 +165,25 @@ public class SignPortGUI implements Listener {
             if (lore != null && !lore.isEmpty()) {
                 String firstLore = lore.get(0);
                 if (firstLore.contains("Click to go to page")) {
-                    int targetPage = Integer.parseInt(firstLore.split(" ")[5]);
-                    openSignPortMenu(player, targetPage);
+                    try {
+                        // Expecting format: "Click to go to page X"
+                        String[] parts = firstLore.split(" ");
+                        if (parts.length >= 6) {
+                            int targetPage = Integer.parseInt(parts[5]);
+                            openSignPortMenu(player, targetPage);
+                        }
+                    } catch (NumberFormatException ignored) {
+                        player.sendMessage(ChatColor.RED + "Invalid page number in menu navigation.");
+                    }
                 }
             }
         }
     }
 
     private void handleEditSignPort(Player player) {
-        // Implement edit functionality
+        // Implement edit functionality.
         player.closeInventory();
-        player.sendMessage(ChatColor.YELLOW + "To edit a SignPort, use the following commands:");
+        player.sendMessage(ChatColor.YELLOW + "To edit your SignPort, use the following commands:");
         player.sendMessage(ChatColor.YELLOW + "/signport setname <name> - Change the name of your SignPort");
         player.sendMessage(ChatColor.YELLOW + "/signport setdesc <description> - Change the description of your SignPort");
         player.sendMessage(ChatColor.YELLOW + "/signport setitem - Change the item representing your SignPort");
@@ -161,15 +191,14 @@ public class SignPortGUI implements Listener {
 
     private void handleSignPortClick(Player player, ItemStack clickedItem) {
         plugin.getLogger().info("Handling SignPort click for player " + player.getName());
-
-        if (clickedItem == null || clickedItem.getType() == Material.BLACK_STAINED_GLASS_PANE) {
-            plugin.getLogger().info("Clicked item is null or glass pane, ignoring");
+        if (clickedItem.getType() == Material.BLACK_STAINED_GLASS_PANE) {
+            plugin.getLogger().info("Clicked item is a glass pane, ignoring.");
             return;
         }
 
         ItemMeta meta = clickedItem.getItemMeta();
         if (meta == null) {
-            plugin.getLogger().info("Clicked item has no metadata, ignoring");
+            plugin.getLogger().info("Clicked item has no metadata, ignoring.");
             return;
         }
 
@@ -177,7 +206,7 @@ public class SignPortGUI implements Listener {
         plugin.getLogger().info("SignPort name from clicked item: '" + signPortName + "'");
 
         if (signPortName.isEmpty()) {
-            plugin.getLogger().info("SignPort name is empty, ignoring");
+            plugin.getLogger().info("SignPort name is empty, ignoring.");
             return;
         }
 
@@ -189,15 +218,12 @@ public class SignPortGUI implements Listener {
         if (location == null || location.getWorld() == null) {
             return "Unknown";
         }
-
         ClaimManager claimManager = GriefDefender.getCore().getClaimManager(location.getWorld().getUID());
         if (claimManager == null) {
             return "Wilderness";
         }
-
         Vector3i vector3i = Vector3i.from(location.getBlockX(), location.getBlockY(), location.getBlockZ());
         Claim claim = claimManager.getClaimAt(vector3i);
-
         if (claim != null) {
             String ownerName = claim.getOwnerName();
             return ownerName != null ? ownerName + "'s Claim" : "Claim-" + claim.getUniqueId().toString().substring(0, 8);

@@ -22,7 +22,6 @@ public class SignPortStorage {
     private final File storageFile;
     private final Gson gson;
     private final Type signPortMapType;
-
     private Map<UUID, SignPortSetup> signPorts;
 
     public SignPortStorage(SignPorts plugin) {
@@ -32,7 +31,7 @@ public class SignPortStorage {
                 .registerTypeAdapter(Location.class, new LocationAdapter())
                 .registerTypeAdapter(ItemStack.class, new ItemStackAdapter())
                 .setExclusionStrategies(new ExclusionStrategyImpl())
-                .setPrettyPrinting() // Optional: Makes the JSON more readable
+                .setPrettyPrinting()
                 .create();
         this.signPortMapType = new TypeToken<Map<UUID, SignPortSetup>>() {}.getType();
         this.signPorts = new HashMap<>();
@@ -62,10 +61,12 @@ public class SignPortStorage {
             }
             plugin.getLogger().info("Sign ports loaded successfully. Total: " + signPorts.size());
             for (Map.Entry<UUID, SignPortSetup> entry : signPorts.entrySet()) {
-                plugin.getLogger().info("Loaded SignPort: " + entry.getValue().getName() + " by " + entry.getValue().getOwnerName());
+                plugin.getLogger().info("Loaded SignPort: " + entry.getValue().getName()
+                        + " by " + entry.getValue().getOwnerName());
             }
         } catch (JsonSyntaxException | IOException e) {
-            plugin.getLogger().log(Level.SEVERE, "Could not load signports from " + storageFile + ". The file may be corrupted or improperly formatted.", e);
+            plugin.getLogger().log(Level.SEVERE, "Could not load signports from " + storageFile
+                    + ". The file may be corrupted or improperly formatted.", e);
             signPorts = new HashMap<>();
         }
     }
