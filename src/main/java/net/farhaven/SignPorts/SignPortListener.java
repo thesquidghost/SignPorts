@@ -4,16 +4,19 @@ import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockState;
 import org.bukkit.block.Sign;
-import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockPhysicsEvent;
 import org.bukkit.event.block.SignChangeEvent;
+import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.block.Action;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.entity.Player;
 
 import com.griefdefender.api.GriefDefender;
 import com.griefdefender.api.claim.Claim;
@@ -83,17 +86,6 @@ public class SignPortListener implements Listener {
         return true;
     }
 
-    private boolean isPlayerAllowedToBreak(Player player, Block block) {
-        SignPortSetup setup = plugin.getSignPortMenu().getSignPortByLocation(block.getLocation());
-        if (setup != null && setup.getOwnerUUID().equals(player.getUniqueId())) {
-            return true;
-        }
-        Claim claim = Objects.requireNonNull(GriefDefender.getCore().getClaimManager(block.getWorld().getUID()))
-                .getClaimAt(block.getLocation().getBlockX(), block.getLocation().getBlockY(), block.getLocation().getBlockZ());
-        User user = GriefDefender.getCore().getUser(player.getUniqueId());
-        return claim == null || claim.canBreak(block.getType(), block.getLocation(), user);
-    }
-
     private void updateSignPortConfig(Player player, SignChangeEvent event, String signportIdentifier) {
         event.setLine(0, ChatColor.BLUE + signportIdentifier);
         event.setLine(1, ChatColor.GREEN + player.getName());
@@ -101,24 +93,58 @@ public class SignPortListener implements Listener {
         event.setLine(3, "");
     }
 
+    /**
+     * Helper method that checks the given block and, if it is a SignPort sign,
+     * removes the corresponding SignPort from the registry.
+     */
+    private void removeSignPortIfBroken(Block block) {
+        BlockState state = block.getState();
+        if (!(state instanceof Sign sign)) {
+            return;
+        }
+        String signportIdentifier = plugin.getConfig().getString("signport-identifier", "[SignPort]");
+        boolean isSignPort = sign.getPersistentDataContainer().has(signportKey, PersistentDataType.STRING)
+                || sign.getLine(0).equalsIgnoreCase(ChatColor.BLUE + signportIdentifier);
+        if (isSignPort) {
+            SignPortSetup setup = plugin.getSignPortMenu().getSignPortByLocation(block.getLocation());
+            if (setup != null) {
+                plugin.getSignPortMenu().removeSignPort(setup.getName());
+                plugin.getLogger().warning("SignPort at " + block.getLocation() + " has been removed from the registry.");
+            }
+        }
+    }
+
+    /*
+     * Handler for player-triggered block breaks. This method still performs
+     * permission checks before removal.
+     */
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onBlockBreak(BlockBreakEvent event) {
         Block block = event.getBlock();
         Player player = event.getPlayer();
 
-        if (block.getState() instanceof Sign sign) {
+        BlockState state = block.getState();
+        if (state instanceof Sign sign) {
             String signportIdentifier = plugin.getConfig().getString("signport-identifier", "[SignPort]");
             boolean isSignPort = sign.getPersistentDataContainer().has(signportKey, PersistentDataType.STRING)
                     || sign.getLine(0).equalsIgnoreCase(ChatColor.BLUE + signportIdentifier);
             if (isSignPort) {
                 SignPortSetup setup = plugin.getSignPortMenu().getSignPortByLocation(block.getLocation());
-                if (setup != null) {
-                    if (!isPlayerAllowedToBreak(player, block)) {
+                // Permission check for players breaking their own signports.
+                if (setup != null && !setup.getOwnerUUID().equals(player.getUniqueId())) {
+                    Claim claim = Objects.requireNonNull(
+                                    GriefDefender.getCore().getClaimManager(block.getWorld().getUID()))
+                            .getClaimAt(block.getLocation().getBlockX(), block.getLocation().getBlockY(), block.getLocation().getBlockZ());
+                    User user = GriefDefender.getCore().getUser(player.getUniqueId());
+                    if (claim != null && !claim.canBreak(block.getType(), block.getLocation(), user)) {
                         event.setCancelled(true);
                         player.sendMessage(ChatColor.RED + "You don't have permission to remove this SignPort.");
                         return;
                     }
-                    plugin.getSignPortMenu().removeSignPort(setup.getName());
+                }
+                // Remove the signport from the registry regardless of how the sign was broken.
+                removeSignPortIfBroken(block);
+                if (setup != null) {
                     player.sendMessage(ChatColor.RED + "Your SignPort has been destroyed.");
                     plugin.getLogger().warning("SignPort owned by " + player.getName() +
                             " has been destroyed at " + block.getLocation());
@@ -128,6 +154,21 @@ public class SignPortListener implements Listener {
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onEntityExplode(EntityExplodeEvent event) {
+        // Loop through all blocks affected by the explosion.
+        for (Block block : event.blockList()) {
+            removeSignPortIfBroken(block);
+        }
+    }
+
+    // New handler for physics events to catch situations where signs break due to physics updates.
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onBlockPhysics(BlockPhysicsEvent event) {
+        Block block = event.getBlock();
+        removeSignPortIfBroken(block);
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onSignEdit(SignChangeEvent event) {
         Block block = event.getBlock();
         if (block.getState() instanceof Sign sign) {
