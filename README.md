@@ -8,6 +8,7 @@ SignPorts is a Bukkit/Spigot plugin that allows players to create and use sign-b
 
 ## Features
 
+- UPDATE! ADDED CROUCH + RIGHT CLICK MENU FOR LOCKING SIGNS
 - Create teleportation points using signs within player-owned claims
 - GUI-based menu for easy navigation and management of SignPorts
 - Customizable sign format and messages
